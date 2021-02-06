@@ -193,7 +193,7 @@ int main(int argc, char* argv[]){
   	}
   	
 	for(int i = 1; i<argc; i++){
-		yyin = fopen(argv[1], "r");
+		yyin = fopen(argv[i], "r");
 		line = 1, column = 1;
 		cout<<"---------Output for file "<<argv[i]<<"----------\n";
 		cout<<"Token\t\tLexeme\t\tLine#\t\tColumn\t\t\n";
