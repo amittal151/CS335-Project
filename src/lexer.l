@@ -7,6 +7,8 @@ IS			(u|U|l|L)*
 
 %{
 #include <stdio.h>
+#include <iostream>
+using namespace std;
 #include "parser.hpp"
 
 void count(int);
@@ -19,98 +21,98 @@ void comment();
 "//"[^\n]*      { /* consume //-comment */ }
 
 
-"auto"			{ printf("AUTO\t\t"); count(1); return(AUTO); }
-"break"			{ printf("BREAK\t\t"); count(1); return(BREAK); }
-"case"			{ printf("CASE\t\t"); count(1); return(CASE); }
-"char"			{ printf("CHAR\t\t"); count(1); return(CHAR); }
-"const"			{ printf("CONST\t\t"); count(1); return(CONST); }
-"continue"		{ printf("CONTINUE\t\t"); count(1); return(CONTINUE); }
-"default"		{ printf("DEFAULT\t\t"); count(1); return(DEFAULT); }
-"do"			{ printf("DO\t\t"); count(1); return(DO); }
-"double"		{ printf("DOUBLE\t\t"); count(1); return(DOUBLE); }
-"else"			{ printf("ELSE\t\t"); count(1); return(ELSE); }
-"enum"			{ printf("ENUM\t\t"); count(1); return(ENUM); }
-"extern"		{ printf("EXTERN\t\t"); count(1); return(EXTERN); }
-"float"			{ printf("FLOAT\t\t"); count(1); return(FLOAT); }
-"for"			{ printf("FOR\t\t"); count(1); return(FOR); }
-"goto"			{ printf("GOTO\t\t"); count(1); return(GOTO); }
-"if"			{ printf("IF\t\t"); count(1); return(IF); }
-"int"			{ printf("INT\t\t"); count(1); return(INT); }
-"long"			{ printf("LONG\t\t"); count(1); return(LONG); }
-"register"		{ printf("REGISTER\t\t"); count(1); return(REGISTER); }
-"return"		{ printf("RETURN\t\t"); count(1); return(RETURN); }
-"short"			{ printf("SHORT\t\t"); count(1); return(SHORT); }
-"signed"		{ printf("SIGNED\t\t"); count(1); return(SIGNED); }
-"sizeof"		{ printf("SIZEOF\t\t"); count(1); return(SIZEOF); }
-"static"		{ printf("STATIC\t\t"); count(1); return(STATIC); }
-"struct"		{ printf("STRUCT\t\t"); count(1); return(STRUCT); }
-"switch"		{ printf("SWITCH\t\t"); count(1); return(SWITCH); }
-"typedef"		{ printf("TYPEDEF\t\t"); count(1); return(TYPEDEF); }
-"union"			{ printf("UNION\t\t"); count(1); return(UNION); }
-"unsigned"		{ printf("UNSIGNED\t"); count(1); return(UNSIGNED); }
-"void"			{ printf("VOID\t\t"); count(1); return(VOID); }
-"volatile"		{ printf("VOLATILE\t"); count(1); return(VOLATILE); }
-"while"			{ printf("WHILE\t\t"); count(1); return(WHILE); }
+"auto"			{ cout<<"AUTO\t\t"; count(1); return(AUTO); }
+"break"			{ cout<<"BREAK\t\t"; count(1); return(BREAK); }
+"case"			{ cout<<"CASE\t\t"; count(1); return(CASE); }
+"char"			{ cout<<"CHAR\t\t"; count(1); return(CHAR); }
+"const"			{ cout<<"CONST\t\t"; count(1); return(CONST); }
+"continue"		{ cout<<"CONTINUE\t\t"; count(1); return(CONTINUE); }
+"default"		{ cout<<"DEFAULT\t\t"; count(1); return(DEFAULT); }
+"do"			{ cout<<"DO\t\t"; count(1); return(DO); }
+"double"		{ cout<<"DOUBLE\t\t"; count(1); return(DOUBLE); }
+"else"			{ cout<<"ELSE\t\t"; count(1); return(ELSE); }
+"enum"			{ cout<<"ENUM\t\t"; count(1); return(ENUM); }
+"extern"		{ cout<<"EXTERN\t\t"; count(1); return(EXTERN); }
+"float"			{ cout<<"FLOAT\t\t"; count(1); return(FLOAT); }
+"for"			{ cout<<"FOR\t\t"; count(1); return(FOR); }
+"goto"			{ cout<<"GOTO\t\t"; count(1); return(GOTO); }
+"if"			{ cout<<"IF\t\t"; count(1); return(IF); }
+"int"			{ cout<<"INT\t\t"; count(1); return(INT); }
+"long"			{ cout<<"LONG\t\t"; count(1); return(LONG); }
+"register"		{ cout<<"REGISTER\t\t"; count(1); return(REGISTER); }
+"return"		{ cout<<"RETURN\t\t"; count(1); return(RETURN); }
+"short"			{ cout<<"SHORT\t\t"; count(1); return(SHORT); }
+"signed"		{ cout<<"SIGNED\t\t"; count(1); return(SIGNED); }
+"sizeof"		{ cout<<"SIZEOF\t\t"; count(1); return(SIZEOF); }
+"static"		{ cout<<"STATIC\t\t"; count(1); return(STATIC); }
+"struct"		{ cout<<"STRUCT\t\t"; count(1); return(STRUCT); }
+"switch"		{ cout<<"SWITCH\t\t"; count(1); return(SWITCH); }
+"typedef"		{ cout<<"TYPEDEF\t\t"; count(1); return(TYPEDEF); }
+"union"			{ cout<<"UNION\t\t"; count(1); return(UNION); }
+"unsigned"		{ cout<<"UNSIGNED\t"; count(1); return(UNSIGNED); }
+"void"			{ cout<<"VOID\t\t"; count(1); return(VOID); }
+"volatile"		{ cout<<"VOLATILE\t"; count(1); return(VOLATILE); }
+"while"			{ cout<<"WHILE\t\t"; count(1); return(WHILE); }
 
-{L}({L}|{D})*		{ printf("IDENTIFIER\t"); count(1); return(check_type()); }
+{L}({L}|{D})*		{ cout<<"IDENTIFIER\t"; count(1); return(check_type()); }
 
-0[xX]{H}+{IS}?		{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
-0{D}+{IS}?		{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
-{D}+{IS}?		{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
+0[xX]{H}+{IS}?		{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
+0{D}+{IS}?		{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
+{D}+{IS}?		{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
 
-{D}+{E}{FS}?		{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?	{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?	{ printf("CONSTANT\t"); count(1); return(CONSTANT); }
+{D}+{E}{FS}?		{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ printf("STRING_LITERAL\t"); count(1); return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"	{ cout<<"STRING_LITERAL\t)"; count(1); return(STRING_LITERAL); }
 
-"..."			{ printf("ELLIPSIS\t"); count(1); return(ELLIPSIS); }
-">>="			{ printf("RIGHT_ASSIGN\t"); count(1); return(RIGHT_ASSIGN); }
-"<<="			{ printf("LEFT_ASSIGN\t"); count(1); return(LEFT_ASSIGN); }
-"+="			{ printf("ADD_ASSIGN\t"); count(1); return(ADD_ASSIGN); }
-"-="			{ printf("SUB_ASSIGN\t"); count(1); return(SUB_ASSIGN); }
-"*="			{ printf("MUL_ASSIGN\t"); count(1); return(MUL_ASSIGN); }
-"/="			{ printf("DIV_ASSIGN\t"); count(1); return(DIV_ASSIGN); }
-"%="			{ printf("MOD_ASSIGN\t"); count(1); return(MOD_ASSIGN); }
-"&="			{ printf("AND_ASSIGN\t"); count(1); return(AND_ASSIGN); }
-"^="			{ printf("XOR_ASSIGN\t"); count(1); return(XOR_ASSIGN); }
-"|="			{ printf("OR_ASSIGN\t"); count(1); return(OR_ASSIGN); }
-">>"			{ printf("RIGHT_OP\t"); count(1); return(RIGHT_OP); }
-"<<"			{ printf("LEFT_OP\t\t"); count(1); return(LEFT_OP); }
-"++"			{ printf("INC_OP\t\t"); count(1); return(INC_OP); }
-"--"			{ printf("DEC_OP\t\t"); count(1); return(DEC_OP); }
-"->"			{ printf("PTR_OP\t\t"); count(1); return(PTR_OP); }
-"&&"			{ printf("AND_OP\t\t"); count(1); return(AND_OP); }
-"||"			{ printf("OR_OP\t\t"); count(1); return(OR_OP); }
-"<="			{ printf("LE_OP\t\t"); count(1); return(LE_OP); }
-">="			{ printf("GE_OP\t\t"); count(1); return(GE_OP); }
-"=="			{ printf("EQ_OP\t\t"); count(1); return(EQ_OP); }
-"!="			{ printf("NE_OP\t\t"); count(1); return(NE_OP); }
-";"			{ printf(";\t\t"); count(1); return(';'); }
-("{"|"<%")		{ printf("{\t\t"); count(1); return('{'); }
-("}"|"%>")		{ printf("}\t\t"); count(1); return('}'); }
-","			{ printf(",\t\t"); count(1); return(','); }
-":"			{ printf(":\t\t"); count(1); return(':'); }
-"="			{ printf("=\t\t"); count(1); return('='); }
-"("			{ printf("(\t\t"); count(1); return('('); }
-")"			{ printf(")\t\t"); count(1); return(')'); }
-("["|"<:")		{ printf("[\t\t"); count(1); return('['); }
-("]"|":>")		{ printf("]\t\t"); count(1); return(']'); }
-"."			{ printf(".\t\t"); count(1); return('.'); }
-"&"			{ printf("&\t\t"); count(1); return('&'); }
-"!"			{ printf("!\t\t"); count(1); return('!'); }
-"~"			{ printf("~\t\t"); count(1); return('~'); }
-"-"			{ printf("-\t\t"); count(1); return('-'); }
-"+"			{ printf("+\t\t"); count(1); return('+'); }
-"*"			{ printf("*\t\t"); count(1); return('*'); }
-"/"			{ printf("/\t\t"); count(1); return('/'); }
-"%"			{ printf("%%\t\t"); count(1); return('%'); }
-"<"			{ printf("<\t\t"); count(1); return('<'); }
-">"			{ printf(">\t\t"); count(1); return('>'); }
-"^"			{ printf("^\t\t"); count(1); return('^'); }
-"|"			{ printf("|\t\t"); count(1); return('|'); }
-"?"			{ printf("?\t\t"); count(1); return('?'); }
+"..."			{ cout<<"ELLIPSIS\t"; count(1); return(ELLIPSIS); }
+">>="			{ cout<<"RIGHT_ASSIGN\t"; count(1); return(RIGHT_ASSIGN); }
+"<<="			{ cout<<"LEFT_ASSIGN\t"; count(1); return(LEFT_ASSIGN); }
+"+="			{ cout<<"ADD_ASSIGN\t"; count(1); return(ADD_ASSIGN); }
+"-="			{ cout<<"SUB_ASSIGN\t"; count(1); return(SUB_ASSIGN); }
+"*="			{ cout<<"MUL_ASSIGN\t"; count(1); return(MUL_ASSIGN); }
+"/="			{ cout<<"DIV_ASSIGN\t"; count(1); return(DIV_ASSIGN); }
+"%="			{ cout<<"MOD_ASSIGN\t"; count(1); return(MOD_ASSIGN); }
+"&="			{ cout<<"AND_ASSIGN\t"; count(1); return(AND_ASSIGN); }
+"^="			{ cout<<"XOR_ASSIGN\t"; count(1); return(XOR_ASSIGN); }
+"|="			{ cout<<"OR_ASSIGN\t"; count(1); return(OR_ASSIGN); }
+">>"			{ cout<<"RIGHT_OP\t"; count(1); return(RIGHT_OP); }
+"<<"			{ cout<<"LEFT_OP\t\t"; count(1); return(LEFT_OP); }
+"++"			{ cout<<"INC_OP\t\t"; count(1); return(INC_OP); }
+"--"			{ cout<<"DEC_OP\t\t"; count(1); return(DEC_OP); }
+"->"			{ cout<<"PTR_OP\t\t"; count(1); return(PTR_OP); }
+"&&"			{ cout<<"AND_OP\t\t"; count(1); return(AND_OP); }
+"||"			{ cout<<"OR_OP\t\t"; count(1); return(OR_OP); }
+"<="			{ cout<<"LE_OP\t\t"; count(1); return(LE_OP); }
+">="			{ cout<<"GE_OP\t\t"; count(1); return(GE_OP); }
+"=="			{ cout<<"EQ_OP\t\t"; count(1); return(EQ_OP); }
+"!="			{ cout<<"NE_OP\t\t"; count(1); return(NE_OP); }
+";"			{ cout<<";\t\t"; count(1); return(';'); }
+("{"|"<%")		{ cout<<"{\t\t"; count(1); return('{'); }
+("}"|"%>")		{ cout<<"}\t\t"; count(1); return('}'); }
+","			{ cout<<",\t\t"; count(1); return(','); }
+":"			{ cout<<":\t\t"; count(1); return(':'); }
+"="			{ cout<<"=\t\t"; count(1); return('='); }
+"("			{ cout<<"(\t\t"; count(1); return('('); }
+")"			{ cout<<")\t\t"; count(1); return(')'); }
+("["|"<:")		{ cout<<"[\t\t"; count(1); return('['); }
+("]"|":>")		{ cout<<"]\t\t"; count(1); return(']'); }
+"."			{ cout<<".\t\t"; count(1); return('.'); }
+"&"			{ cout<<"&\t\t"; count(1); return('&'); }
+"!"			{ cout<<"!\t\t"; count(1); return('!'); }
+"~"			{ cout<<"~\t\t"; count(1); return('~'); }
+"-"			{ cout<<"-\t\t"; count(1); return('-'); }
+"+"			{ cout<<"+\t\t"; count(1); return('+'); }
+"*"			{ cout<<"*\t\t"; count(1); return('*'); }
+"/"			{ cout<<"/\t\t"; count(1); return('/'); }
+"%"			{ cout<<"%%\t\t"; count(1); return('%'); }
+"<"			{ cout<<"<\t\t"; count(1); return('<'); }
+">"			{ cout<<">\t\t"; count(1); return('>'); }
+"^"			{ cout<<"^\t\t"; count(1); return('^'); }
+"|"			{ cout<<"|\t\t"; count(1); return('|'); }
+"?"			{ cout<<"?\t\t"; count(1); return('?'); }
 
 [ \t\v\n\f]		{ count(0); }
 .			{ /* ignore bad characters */ }
@@ -149,8 +151,8 @@ void count(int flag)
 {
 	int i;
     if(flag){
-        printf("%s\t\t", yytext);
-        printf("%d\t%d\n", line, column);
+        cout<<yytext<<"\t\t";
+        cout<<line<<"\t\t"<<column<<"\n";
     }
 
 	for (i = 0; yytext[i] != '\0'; i++)
@@ -182,4 +184,24 @@ int check_type()
 */
 
 	return(IDENTIFIER);
+}
+
+int main(int argc, char* argv[]){
+	if(argc <= 1){
+    	cout<<"Inadequate number of parameters.\n";
+  		return -1;
+  	}
+  	
+	for(int i = 1; i<argc; i++){
+		yyin = fopen(argv[1], "r");
+		line = 1, column = 1;
+		cout<<"---------Output for file "<<argv[i]<<"----------\n";
+		cout<<"Token\t\tLexeme\t\tLine#\t\tColumn\t\t\n";
+		
+		while( yylex() > 0 ){
+		
+		}
+		cout<<"------------------------------------------------\n";
+	}
+
 }

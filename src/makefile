@@ -1,11 +1,19 @@
+CC=g++ -w 
 BIN=../bin
+SRC=.
 
-lexer:
-	mkdir $(BIN)
+lexer:	lexer.cpp	
+	if [ ! -d $(BIN) ]; then mkdir $(BIN); fi
+	$(CC) -o $(BIN)/lexer $^
+
+lexer.cpp:	lexer.l parser.hpp
+	flex -o lexer.cpp lexer.l
+	
+parser.hpp: parser.y
 	bison -d -o parser.cpp parser.y
-	flex -o scanner.cpp lexer.l
-	g++ -Wno-write-strings -o $(BIN)/lexer scanner.cpp parser.cpp  
 
 clean:
-	rm -r $(BIN)/
-	rm ./*.cpp ./*.hpp
+	rm -rf $(BIN)/ 
+
+allclean:	clean
+	rm -f ./*.cpp ./*.hpp
