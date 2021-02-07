@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+#include <iostream>
 extern char yytext[];
 extern int column;
 int yyerror(char*);
@@ -424,22 +425,4 @@ function_definition
 	;
 
 %%
-
-
-int main(int argc, char* argv[]){
-  if(argc <= 1){
-      printf("Inadequate number of parameters.\n");
-  }
-  else{
-      yyin = fopen(argv[1], "r");
-  }
-  int status = yyparse(); 
-  return status;
-} 
-
-int yyerror(char* s){
-	fflush(stdout);
-	printf("\n%*s\n%*s\n", column, "^", column, s);
-    return 0;
-}
 
