@@ -184,24 +184,27 @@ void print_options(){
 }
 
 int main(int argc, char* argv[]){
-	int flag = 0;
-
+	
 	if(argc <= 1){
-    	cout<<"Inadequate number of parameters.\n";
+    	cout<<"Error: no input files\n";
   		return -1;
   	}
   	
-	for(int i = 1; i<argc; i++){
-		if(!strcmp(argv[i], "--help")){
-			if(flag)continue;
-			cout<<"OVERVIEW: C Compiler Lexer\n\n";
-			cout<<"USAGE: lexer [options] file1 file2 ...\n\n";
-			cout<<"OPTIONS:\n";
-			print_options();
-			flag = 1;
-			return 0;
+  	for(int i = 1; i<argc; i++){
+  		if(!strcmp(argv[i], "--help")){
+			goto help;
 		}
+  	}
+  	
+	for(int i = 1; i<argc; i++){
 		yyin = fopen(argv[i], "r");
+		
+		// File open failed, proceeding to next file(s), if exist
+		if(yyin == NULL){
+			cout<<"Error: cannot open file "<<argv[i]<<"\n\n";
+			continue;
+		}
+		
 		yyrestart(yyin);
 
 		line = 1, column = 0;
@@ -211,7 +214,17 @@ int main(int argc, char* argv[]){
 		while( yylex() > 0 ){
 		
 		}
-		cout<<"------------------------------------------------\n";
+		cout<<"---------------------------------------------------\n";
 	}
+	
+	return 0;
+	
+	help:
+	cout<<"OVERVIEW: C Compiler Lexer\n\n";
+	cout<<"USAGE: lexer [options] file1 file2 ...\n\n";
+	cout<<"OPTIONS:\n";
+	print_options();
+	return 0;
+	
 
 }
