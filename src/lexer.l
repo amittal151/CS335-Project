@@ -195,7 +195,7 @@ int main(int argc, char* argv[]){
 		if(!strcmp(argv[i], "--help")){
 			if(flag)continue;
 			cout<<"OVERVIEW: C Compiler Lexer\n\n";
-			cout<<"USAGE: lexer [options] file\n\n";
+			cout<<"USAGE: lexer [options] file1 file2 ...\n\n";
 			cout<<"OPTIONS:\n";
 			print_options();
 			flag = 1;
