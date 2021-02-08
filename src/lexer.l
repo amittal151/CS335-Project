@@ -14,10 +14,15 @@ using namespace std;
 void count(int);
 int check_type();
 void comment();
+int error_handler();
+void print_options();
+
 %}
 
 %%
-"/*"			{ comment(); }
+
+"/*"([^*]|(\*+[^*/]))*\*+\/		{ count(0); }
+
 "//"[^\n]*      { /* consume //-comment */ }
 
 
@@ -65,7 +70,7 @@ L?'(\\.|[^\\'])+'	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
 {D}*"."{D}+({E})?{FS}?	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
 {D}+"."{D}*({E})?{FS}?	{ cout<<"CONSTANT\t"; count(1); return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ cout<<"STRING_LITERAL\t)"; count(1); return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"	{ cout<<"STRING_LITERAL\t"; count(1); return(STRING_LITERAL); }
 
 "..."			{ cout<<"ELLIPSIS\t"; count(1); return(ELLIPSIS); }
 ">>="			{ cout<<"RIGHT_ASSIGN\t"; count(1); return(RIGHT_ASSIGN); }
@@ -115,7 +120,7 @@ L?\"(\\.|[^\\"])*\"	{ cout<<"STRING_LITERAL\t)"; count(1); return(STRING_LITERAL
 "?"			{ cout<<"?\t\t"; count(1); return('?'); }
 
 [ \t\v\n\f]		{ count(0); }
-.			{ /* ignore bad characters */ }
+.			{ return error_handler(); /* Return error on bad characters */ }
 
 %%
 
@@ -124,44 +129,29 @@ int yywrap()
 	return(1);
 }
 
-
-void comment()
-{
-	char c, c1;
-
-loop:
-	while ((c = yyinput()) != '*' && c != 0)
-		putchar(c);
-
-	if ((c1 = yyinput()) != '/' && c != 0)
-	{
-		unput(c1);
-		goto loop;
-	}
-
-	if (c != 0)
-		putchar(c1);
-}
-
-
-int column = 1;
+int column = 0;
 int line = 1;
+
+int error_handler(){
+	cerr<<"Error : Bad character "<<yytext<<" in line# "<<line<<", and column# "<<column + 1<<"\n"; 
+	return(0);
+}
 
 void count(int flag)
 {
 	int i;
     if(flag){
         cout<<yytext<<"\t\t";
-        cout<<line<<"\t\t"<<column<<"\n";
+        cout<<line<<"\t\t"<<column+1<<"\n";
     }
 
 	for (i = 0; yytext[i] != '\0'; i++)
 		if (yytext[i] == '\n'){
-			column = 1;
+			column = 0;
             line ++;
         }
 		else if (yytext[i] == '\t')
-			column += 7 - ((column -1)% 8);
+			column += 8 - (column% 8);
 		else
 			column++;
 	// ECHO;
@@ -186,18 +176,38 @@ int check_type()
 	return(IDENTIFIER);
 }
 
+void print_options(){
+	// To be constructed later
+	cout<<"\t--help\t\t\tDisplay available options\n";
+
+	cout<<"\n\n";
+}
+
 int main(int argc, char* argv[]){
+	int flag = 0;
+
 	if(argc <= 1){
     	cout<<"Inadequate number of parameters.\n";
   		return -1;
   	}
   	
 	for(int i = 1; i<argc; i++){
+		if(!strcmp(argv[i], "--help")){
+			if(flag)continue;
+			cout<<"OVERVIEW: C Compiler Lexer\n\n";
+			cout<<"USAGE: lexer [options] file\n\n";
+			cout<<"OPTIONS:\n";
+			print_options();
+			flag = 1;
+			return 0;
+		}
 		yyin = fopen(argv[i], "r");
-		line = 1, column = 1;
+		yyrestart(yyin);
+
+		line = 1, column = 0;
 		cout<<"---------Output for file "<<argv[i]<<"----------\n";
-		cout<<"Token\t\tLexeme\t\tLine#\t\tColumn\t\t\n";
-		
+		cout<<"Token\t\tLexeme\t\tLine#\t\tColumn#\t\t\n";
+	
 		while( yylex() > 0 ){
 		
 		}
