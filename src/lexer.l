@@ -151,7 +151,7 @@ void count(int flag)
             line ++;
         }
 		else if (yytext[i] == '\t')
-			column += 8 - (column% 8);
+			column += 4 - (column% 4);
 		else
 			column++;
 	// ECHO;

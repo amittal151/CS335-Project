@@ -10,7 +10,7 @@ int main()
 	int b = *a+2; 
    switch (x) 
    { 
-       case 1: printf("Choice is 1"); 
+	   case 1: printf("Choice is 1"); 
                break; 
        case 2: printf("Choice is 2"); 
                 break; 
