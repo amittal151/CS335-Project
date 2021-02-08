@@ -5,7 +5,7 @@
 C compiler project prepared as a project in CS335A Course at IITK under supervision of Prof. Amey Karkare, Dept. of Computer Science and Engineering. 
 As of now, Lexer is implemented. 
 
-## Lexer : 
+## Milestone 1 : Scanner
 
     Steps to Build and Run Lexer (in Terminal):  
      1. cd src
