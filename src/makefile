@@ -2,9 +2,9 @@ CC=g++ -w
 BIN=../bin
 SRC=.
 
-lexer:	lexer.cpp	
-	if [ ! -d $(BIN) ]; then mkdir $(BIN); fi
-	$(CC) -o $(BIN)/lexer $^
+$(BIN)/lexer:	lexer.cpp	
+	mkdir -p $(BIN)
+	$(CC) -o $@ $^
 
 lexer.cpp:	lexer.l parser.hpp
 	flex -o lexer.cpp lexer.l
