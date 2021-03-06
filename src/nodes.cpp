@@ -24,7 +24,7 @@ void insertAttr(vector<data> &v, treeNode* nod, string s, int flag){
 	v.push_back(d);
 }
 
-treeNode *terminal(string str){
+treeNode *makeleaf(string str){
 	treeNode *node = new treeNode;
 	node->node_id = ++NodeCounter;
 	
@@ -46,7 +46,7 @@ treeNode *terminal(string str){
 	return node;
 }
 
-treeNode *nonTerminal(string s, vector<data> &v){
+treeNode *makenode(string s, vector<data> &v){
 	treeNode *node = new treeNode;
 	node->node_name = s;
 	node->node_id = ++NodeCounter;

@@ -23,5 +23,5 @@ void endAST();
 
 vector<data> createVector();
 void insertAttr(vector<data>&, treeNode* , string , int );
-treeNode *terminal(string);
-treeNode *nonTerminal(string , vector<data>&);
+treeNode *makeleaf(string);
+treeNode *makenode(string , vector<data>&);
