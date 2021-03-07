@@ -2,7 +2,7 @@ CC=g++ -w
 BIN=../bin
 SRC=.
 
-$(BIN)/lexer:	lexer.cpp	
+$(BIN)/lexer:	lexer.cpp 	parser.cpp	AST.cpp
 	mkdir -p $(BIN)
 	$(CC) -o $@ $^
 

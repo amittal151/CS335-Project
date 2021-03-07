@@ -1,4 +1,4 @@
-#include "nodes.h"
+#include "AST.h"
 
 extern FILE *dotfile;
 
@@ -37,7 +37,7 @@ treeNode *makeleaf(string str){
 
 	if(str[0]=='"'){
 		string s = tmp.substr(1,tmp.length()-2);
-		fprintf(dotfile, "\t%lu [label=\"\\\"%s\\\"\"];\n", node->node_id,node->node_name.c_str());
+		fprintf(dotfile, "\t%lu [label=\"\\\"%s\\\"\"];\n", node->node_id, s.c_str());
 	}
 	else{
 		fprintf(dotfile, "\t%lu [label=\"%s\"];\n", node->node_id,node->node_name.c_str() );
