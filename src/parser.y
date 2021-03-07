@@ -363,7 +363,7 @@ assignment_expression
 	;
 
 assignment_operator
-	: '='				{$$ = "="}
+	: '='				{$$ = "=";}
 	| MUL_ASSIGN		{$$ = "*=";}
 	| DIV_ASSIGN		{$$ = "/=";}
 	| MOD_ASSIGN		{$$ = "%=";}
@@ -393,10 +393,11 @@ constant_expression
 declaration
 	: declaration_specifiers ';'						{$$ = $1;}
 	| declaration_specifiers init_declarator_list ';'	{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration",attr);
+															$$ = $2;
+															//vector<data> attr;
+															//insertAttr(attr, $1, "", 1);
+															//insertAttr(attr, $2, "", 1);
+															//$$ = makenode("declaration",attr);
 														}
 	;
 
@@ -436,13 +437,13 @@ init_declarator_list
 
 init_declarator
 	: declarator	{
-		$$ = $1;
+		$$ = NULL;
 	}
 	| declarator '=' initializer	{
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		makenode("=", v);
+		$$ = makenode("=", v);
 	}
 	;
 
@@ -667,7 +668,7 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER {
-		$$ =makeleaf($1)
+		$$ =makeleaf($1);
 	}
 	| identifier_list ',' IDENTIFIER{
 		vector<data> v;
@@ -792,16 +793,16 @@ labeled_statement
 	}
 	| CASE constant_expression ':' statement	{
 		vector<data> v;
-		insertAttr(v, NULL, "case", 0);
+		//insertAttr(v, NULL, "case", 0);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = makenode("labeled_statement", v);
+		$$ = makenode("case", v);
 	}
 	| DEFAULT ':' statement	{
 		vector<data> v;
 		insertAttr(v, NULL, "default", 0);
 		insertAttr(v, $3, "", 1);
-		$$ = makenode("labeled_statement", v);
+		$$ = makenode("case", v);
 	}
 	;
 
