@@ -2,10 +2,15 @@ int main()
 { 
    int x = 2; 
    int a = 1;
-	int b = *a+2;
+   /* Multi-Line comment 
+   /* It is a /* a comment only! 
+   @#$* random characters */
+
+   // Single Line Comment - Added Tab character before int!
+	int b = *a+2; 
    switch (x) 
    { 
-       case 1: printf("Choice is 1"); 
+	   case 1: printf("Choice is 1"); 
                break; 
        case 2: printf("Choice is 2"); 
                 break; 

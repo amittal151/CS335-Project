@@ -2,9 +2,9 @@ CC=g++ -w
 BIN=../bin
 SRC=.
 
-lexer:	lexer.cpp	
-	if [ ! -d $(BIN) ]; then mkdir $(BIN); fi
-	$(CC) -o $(BIN)/lexer $^
+$(BIN)/lexer:	lexer.cpp 	parser.cpp	AST.cpp
+	mkdir -p $(BIN)
+	$(CC) -o $@ $^
 
 lexer.cpp:	lexer.l parser.hpp
 	flex -o lexer.cpp lexer.l
@@ -16,4 +16,4 @@ clean:
 	rm -rf $(BIN)/ 
 
 allclean:	clean
-	rm -f ./*.cpp ./*.hpp
+	rm -f lexer.cpp parser.hpp parser.cpp
