@@ -155,7 +155,6 @@ void count(int flag)
 			column += 4 - (column% 4);
 		else
 			column++;
-	ECHO;
 }
 
 

@@ -404,17 +404,17 @@ declaration
 declaration_specifiers
 	: storage_class_specifier							{$$ = $1;}
 	| storage_class_specifier declaration_specifiers	{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration_specifiers",attr);
+															// vector<data> attr;
+															// insertAttr(attr, $1, "", 1);
+															// insertAttr(attr, $2, "", 1);
+															// $$ = makenode("declaration_specifiers",attr);
 														}
 	| type_specifier									{$$ = $1;}
 	| type_specifier declaration_specifiers				{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration_specifiers",attr);
+															// vector<data> attr;
+															// insertAttr(attr, $1, "", 1);
+															// insertAttr(attr, $2, "", 1);
+															// $$ = makenode("declaration_specifiers",attr);
 														}
 	| type_qualifier									{$$ = $1;}
 	| type_qualifier declaration_specifiers				{
@@ -437,7 +437,7 @@ init_declarator_list
 
 init_declarator
 	: declarator	{
-		$$ = NULL;
+	
 	}
 	| declarator '=' initializer	{
 		vector<data> v;
@@ -651,18 +651,18 @@ parameter_list
 parameter_declaration
 	: declaration_specifiers declarator{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
+		// insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
 		$$ = makenode("parameter_declaration",v);
 	}
 	| declaration_specifiers abstract_declarator{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
+		// insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
 		$$ = makenode("parameter_declaration",v);
 	}
 	| declaration_specifiers {
-		$$ =$1;
+		$$ = NULL;
 	}
 	;
 
@@ -933,7 +933,7 @@ external_declaration
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement	{
 		vector<data> v;
-		insertAttr(v, $1, "", 1);
+		// insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -941,7 +941,7 @@ function_definition
 	}
 	| declaration_specifiers declarator compound_statement	{
 		vector<data> v;
-		insertAttr(v, $1, "", 1);
+		// insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("func_defn (without decl_list)", v);
