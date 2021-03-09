@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <iostream>
 #include "AST.h"
-extern char yytext[];
+extern char* yytext;
 extern int column;
+extern int line;
 int yyerror(char*);
 int yylex();
 FILE* dotfile;
@@ -145,7 +146,7 @@ unary_expression
 	}
 	| SIZEOF '(' type_name ')' {
 		vector<data> attr = createVector();
-		insertAttr(attr, $3, "", 1);
+		// insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
 	}
 	;
@@ -177,7 +178,7 @@ cast_expression
 	}
 	| '(' type_name ')' cast_expression {
 		vector<data> attr = createVector();
-		insertAttr(attr, $2, "", 1);
+		// insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
 		$$ = makenode("cast_exp" ,attr);
 	}
@@ -391,7 +392,7 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'						{$$ = $1;}
+	: declaration_specifiers ';'						{$$ = NULL;}
 	| declaration_specifiers init_declarator_list ';'	{
 															$$ = $2;
 															//vector<data> attr;
@@ -437,7 +438,11 @@ init_declarator_list
 
 init_declarator
 	: declarator	{
-	
+		vector<data> attr, b;
+		insertAttr(attr, $1, "", 1);
+		treeNode* ptr = makeleaf("uninitialised");
+		insertAttr(attr, ptr, "", 1);
+		$$ = makenode("=", attr);
 	}
 	| declarator '=' initializer	{
 		vector<data> v;
@@ -995,6 +1000,6 @@ int main(int argc, char* argv[]){
 
 
 int yyerror(char *s) { 
-  printf ("ERROR: %s in [%s]\n", s, yytext);
+  printf ("ERROR: %s in [%s] on line# %d column# %d\n", s, yytext, line, column+1);
   return 0;
 }

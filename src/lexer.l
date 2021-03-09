@@ -17,6 +17,8 @@ int check_type();
 void comment();
 int error_handler();
 void print_options();
+int column = 0;
+int line = 1;
 
 %}
 
@@ -121,21 +123,13 @@ L?\"(\\.|[^\\"])*\"	{ cout<<"STRING_LITERAL\t"; yylval.str = strdup(yytext); cou
 "?"			{ cout<<"?\t\t"; yylval.str = strdup(yytext); count(1); return('?'); }
 
 [ \t\v\n\f]		{ count(0); }
-.			{ return error_handler(); /* Return error on bad characters */ }
+.			{ return -1; }
 
 %%
 
 int yywrap()
 {
 	return(1);
-}
-
-int column = 0;
-int line = 1;
-
-int error_handler(){
-	cerr<<"Error : Bad character "<<yytext<<" in line# "<<line<<", and column# "<<column + 1<<"\n"; 
-	return(0);
 }
 
 void count(int flag)
