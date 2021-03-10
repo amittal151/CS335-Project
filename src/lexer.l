@@ -171,12 +171,12 @@ int check_type()
 }
 
 
-void print_options(){
-	// To be constructed later
-	cout<<"\t--help\t\t\tDisplay available options\n";
+// void print_options(){
+// 	// To be constructed later
+// 	cout<<"\t--help\t\t\tDisplay available options\n";
 
-	cout<<"\n\n";
-}
+// 	cout<<"\n\n";
+// }
 
 // int main(int argc, char* argv[]){
 	

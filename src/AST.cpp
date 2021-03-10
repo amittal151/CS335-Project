@@ -60,11 +60,14 @@ treeNode *makenode(string s, vector<data> &v){
 			if(v[i].str!="") fprintf(dotfile, "\t%lu [label=\"%s\"];\n", opid, v[i].str.c_str());
 		}
 	}
+
+
 	fprintf(dotfile, "\t%lu [label=\"%s\"];\n", node->node_id, node->node_name.c_str());
 
 	int j=0;
 	for(int i=0; i<v.size(); ++i){
-		if(v[i].is_node && v[i].node) fprintf(dotfile, "\t%lu -> %lu;\n", node->node_id, v[i].node->node_id);
+		// if string or node is NULL, dont print in dot 
+		if(v[i].is_node && v[i].node ) fprintf(dotfile, "\t%lu -> %lu;\n", node->node_id, v[i].node->node_id);
 		if(!v[i].is_node){
 			if(v[i].str!="") fprintf(dotfile, "\t%lu -> %lu;\n", node->node_id, op_id[j]);
 			j++;

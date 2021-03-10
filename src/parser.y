@@ -39,10 +39,10 @@ extern FILE* yyin;
 %type<ptr> and_expression exclusive_or_expression inclusive_or_expression logical_and_expression logical_or_expression conditional_expression 
 %type<ptr> assignment_expression expression constant_expression declaration declaration_specifiers init_declarator_list
 %type<ptr> declarator direct_declarator pointer type_qualifier_list parameter_type_list parameter_list parameter_declaration identifier_list type_name abstract_declarator direct_abstract_declarator initializer
-%type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_or_union	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
+%type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
-
 %type<ptr> storage_class_specifier
+%type<str> struct_or_union
 
 %left ';'
 
@@ -84,6 +84,7 @@ postfix_expression
 		$$ = makenode("postfix_expression", attr);
 	}
 	| postfix_expression '.' IDENTIFIER {
+		// TODO
 		vector<data> attr = createVector();
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, makeleaf($3), "", 1);
@@ -115,7 +116,7 @@ argument_expression_list
 		vector<data> attr = createVector();
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = makenode("arguement_list", attr);
+		$$ = makenode("argument_list", attr);
 	}
 	;
 
@@ -146,7 +147,7 @@ unary_expression
 	}
 	| SIZEOF '(' type_name ')' {
 		vector<data> attr = createVector();
-		// insertAttr(attr, $3, "", 1);
+		insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
 	}
 	;
@@ -178,9 +179,9 @@ cast_expression
 	}
 	| '(' type_name ')' cast_expression {
 		vector<data> attr = createVector();
-		// insertAttr(attr, $2, "", 1);
+		insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
-		$$ = makenode("cast_exp" ,attr);
+		$$ = makenode("cast_expression" ,attr);
 	}
 	;
 
@@ -365,16 +366,16 @@ assignment_expression
 
 assignment_operator
 	: '='				{$$ = "=";}
-	| MUL_ASSIGN		{$$ = "*=";}
-	| DIV_ASSIGN		{$$ = "/=";}
-	| MOD_ASSIGN		{$$ = "%=";}
-	| ADD_ASSIGN		{$$ = "+=";}
-	| SUB_ASSIGN		{$$ = "-=";}
-	| LEFT_ASSIGN		{$$ = "<<=";}
-	| RIGHT_ASSIGN		{$$ = ">>=";}
-	| AND_ASSIGN		{$$ = "&=";}
-	| XOR_ASSIGN		{$$ = "^=";}
-	| OR_ASSIGN			{$$ = "|=";}
+	| MUL_ASSIGN		{$$ = $1;}
+	| DIV_ASSIGN		{$$ = $1;}
+	| MOD_ASSIGN		{$$ = $1;}
+	| ADD_ASSIGN		{$$ = $1;}
+	| SUB_ASSIGN		{$$ = $1;}
+	| LEFT_ASSIGN		{$$ = $1;}
+	| RIGHT_ASSIGN		{$$ = $1;}
+	| AND_ASSIGN		{$$ = $1;}
+	| XOR_ASSIGN		{$$ = $1;}
+	| OR_ASSIGN			{$$ = $1;}
 	;
 
 expression
@@ -392,32 +393,31 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'						{$$ = NULL;}
+	: declaration_specifiers ';'						{ $$ = $1; }
 	| declaration_specifiers init_declarator_list ';'	{
-															$$ = $2;
-															//vector<data> attr;
-															//insertAttr(attr, $1, "", 1);
-															//insertAttr(attr, $2, "", 1);
-															//$$ = makenode("declaration",attr);
+															vector<data> attr;
+															insertAttr(attr, $1, "", 1);
+															insertAttr(attr, $2, "", 1);
+															$$ = makenode("declaration",attr);
 														}
 	;
 
 declaration_specifiers
-	: storage_class_specifier							{$$ = $1;}
+	: storage_class_specifier							{ $$ = $1; }
 	| storage_class_specifier declaration_specifiers	{
-															// vector<data> attr;
-															// insertAttr(attr, $1, "", 1);
-															// insertAttr(attr, $2, "", 1);
-															// $$ = makenode("declaration_specifiers",attr);
+															vector<data> attr;
+															insertAttr(attr, $1, "", 1);
+															insertAttr(attr, $2, "", 1);
+															$$ = makenode("declaration_specifiers",attr);
 														}
-	| type_specifier									{$$ = $1;}
+	| type_specifier									{ $$ = $1; }
 	| type_specifier declaration_specifiers				{
-															// vector<data> attr;
-															// insertAttr(attr, $1, "", 1);
-															// insertAttr(attr, $2, "", 1);
-															// $$ = makenode("declaration_specifiers",attr);
+															vector<data> attr;
+															insertAttr(attr, $1, "", 1);
+															insertAttr(attr, $2, "", 1);
+															$$ = makenode("declaration_specifiers",attr);
 														}
-	| type_qualifier									{$$ = $1;}
+	| type_qualifier									{ $$ = $1; }
 	| type_qualifier declaration_specifiers				{
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
@@ -438,11 +438,7 @@ init_declarator_list
 
 init_declarator
 	: declarator	{
-		vector<data> attr, b;
-		insertAttr(attr, $1, "", 1);
-		treeNode* ptr = makeleaf("uninitialised");
-		insertAttr(attr, ptr, "", 1);
-		$$ = makenode("=", attr);
+		$$ = $1;
 	}
 	| declarator '=' initializer	{
 		vector<data> v;
@@ -471,91 +467,182 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID	
-	| CHAR
-	| SHORT
-	| INT
-	| LONG
-	| FLOAT
-	| DOUBLE
-	| SIGNED
-	| UNSIGNED
-	| struct_or_union_specifier
-	| enum_specifier
-	| TYPE_NAME
+	: VOID		{
+		$$ = makeleaf($1);
+	}	
+	| CHAR		{
+		$$ = makeleaf($1);
+	}	
+	| SHORT		{
+		$$ = makeleaf($1);
+	}	
+	| INT			{
+		$$ = makeleaf($1);
+	}
+	| LONG			{
+		$$ = makeleaf($1);
+	}
+	| FLOAT			{
+		$$ = makeleaf($1);
+	}
+	| DOUBLE		{
+		$$ = makeleaf($1);
+	}
+	| SIGNED		{
+		$$ = makeleaf($1);
+	}
+	| UNSIGNED		{
+		$$ = makeleaf($1);
+	}
+	| struct_or_union_specifier	{
+		$$ = $1;
+	}	
+	| enum_specifier	{
+		$$ = $1;
+	}
+	| TYPE_NAME		{
+		$$ = makeleaf($1);
+	}	
 	;
 
 struct_or_union_specifier
-	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'	
-	| struct_or_union '{' struct_declaration_list '}'
-	| struct_or_union IDENTIFIER
+	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'	{
+		vector<data> v;
+		insertAttr(v, makeleaf($2), "", 1);
+		insertAttr(v, $4, "", 1);
+		$$ = makenode($1, v);
+	}
+	| struct_or_union '{' struct_declaration_list '}'		{
+		vector<data> v;
+		insertAttr(v, $3, "", 1);
+		$$ = makenode($1, v);
+	}
+	| struct_or_union IDENTIFIER 	{
+		vector<data> v;
+		insertAttr(v, makeleaf($2), "", 1);
+		$$ = makenode($1, v);
+	}
 	;
 
 struct_or_union
-	: STRUCT	
-	| UNION
+	: STRUCT	{$$ = $1;}
+	| UNION		{$$ = $1;}
 	;
 
 struct_declaration_list
-	: struct_declaration
-	| struct_declaration_list struct_declaration
+	: struct_declaration	{ $$ = $1 ;}
+	| struct_declaration_list struct_declaration 	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("struct_declaration_list", v);
+	}
 	;
 
 struct_declaration
-	: specifier_qualifier_list struct_declarator_list ';'
+	: specifier_qualifier_list struct_declarator_list ';' 	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("struct_declaration", v);
+	}
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list
-	| type_specifier
-	| type_qualifier specifier_qualifier_list
-	| type_qualifier
+	: type_specifier specifier_qualifier_list	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("specifier_qualifier_list", v);
+	}
+	| type_specifier	{ $$ = $1; }
+	| type_qualifier specifier_qualifier_list 	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("specifier_qualifier_list", v);
+	}
+	| type_qualifier	{ $$ = $1; }
 	;
 
 struct_declarator_list
-	: struct_declarator
-	| struct_declarator_list ',' struct_declarator
+	: struct_declarator { $$ = $1; }
+	| struct_declarator_list ',' struct_declarator {
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $3, "", 1);
+		$$ = makenode("struct_declarator_list", v);
+	}
 	;
 
 struct_declarator
-	: declarator
-	| ':' constant_expression
-	| declarator ':' constant_expression
+	: declarator	{ $$ = $1; }
+	| ':' constant_expression	{ $$ = $2; }
+	| declarator ':' constant_expression	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $3, "", 1);
+		$$ = makenode(":", v);
+	}
 	;
 
 enum_specifier
-	: ENUM '{' enumerator_list '}'
-	| ENUM IDENTIFIER '{' enumerator_list '}'
-	| ENUM IDENTIFIER
+	: ENUM '{' enumerator_list '}'		{
+		vector<data> v;
+		insertAttr(v, $3, "", 1);
+		$$ = makenode($1, v);
+	}
+	| ENUM IDENTIFIER '{' enumerator_list '}'	{
+		vector<data> v;
+		insertAttr(v, makeleaf($2), "", 1);
+		insertAttr(v, $4, "", 1);
+		$$ = makenode($1, v);
+	}
+	| ENUM IDENTIFIER {
+		vector<data> v;
+		insertAttr(v, makeleaf($2), "", 1);
+		$$ = makenode($1, v);
+	}
 	;
 
 enumerator_list
-	: enumerator
-	| enumerator_list ',' enumerator
+	: enumerator 	{ $$ = $1; }
+	| enumerator_list ',' enumerator 	{
+		vector<data> v;
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $3, "", 1);
+		$$ = makenode("enumerator_list", v);
+	}
 	;
 
 enumerator
-	: IDENTIFIER
-	| IDENTIFIER '=' constant_expression
+	: IDENTIFIER	{ $$ = makeleaf($1); }
+	| IDENTIFIER '=' constant_expression 	{
+		vector<data> v;
+		insertAttr(v, makeleaf($1), "", 1);
+		insertAttr(v, $3, "", 1);
+		$$ = makenode("=", v);
+	}
 	;
 
 type_qualifier
-	: CONST
-	| VOLATILE
+	: CONST		{ $$ = makeleaf($1); }
+	| VOLATILE	{ $$ = makeleaf($1); }
 	;
 
 
 declarator
 	: pointer direct_declarator{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
-		$$ = makenode("declarator",v);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("declarator", v);
 	}
 	| direct_declarator {
 		$$ = $1 ;
 	}
 	;
+
 
 direct_declarator
 	: IDENTIFIER {
@@ -565,54 +652,62 @@ direct_declarator
 		$$ = $2 ;
 	}
 	| direct_declarator '[' constant_expression ']'{
-		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = makenode("[]",v);
+		vector<data> v, v2;
+		insertAttr(v2, $3, "", 1);
+		treeNode* node = makenode("[ ]", v2);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, node, "", 1);
+		$$ = makenode("direct_declarator", v);
 	}
 	| direct_declarator '[' ']'{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
-		$$ = makenode("[]",v);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, NULL, "[ ]", 0);
+		$$ = makenode("direct_declarator", v);
 	}
 	| direct_declarator '(' parameter_type_list ')'{
-		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = makenode("()",v);
+		vector<data> v, v2;
+		insertAttr(v2, $3, "", 1);
+		treeNode* node = makenode("( )", v2);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, node, "", 1);
+		$$ = makenode("direct_declarator", v);
 	}
 	| direct_declarator '(' identifier_list ')'{
-		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = makenode("()",v);
+		vector<data> v, v2;
+		insertAttr(v2, $3, "", 1);
+		treeNode* node = makenode("( )", v2);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, node, "", 1);
+		$$ = makenode("direct_declarator", v);
 	}
 	| direct_declarator '(' ')'{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
-		$$ = makenode("()",v);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, NULL, "( )", 0);
+		$$ = makenode("direct_declarator", v);
 	}
 	;
 
 pointer
 	: '*' {
-		$$ = makeleaf("*");
+		$$ = makeleaf("*(Pointer)");
 	}
 	| '*' type_qualifier_list{
 		vector<data> v;
 		insertAttr(v,$2,"",1);
-		makenode("*",v);
+		$$ = makenode("*(Pointer)",v);
 	}
 	| '*' pointer{
 		vector<data> v;
 		insertAttr(v,$2,"",1);
-		makenode("*",v);
+		$$ = makenode("*(Pointer)",v);
 	}
 	| '*' type_qualifier_list pointer{
 		vector<data> v;
 		insertAttr(v,$2,"",1);
 		insertAttr(v,$3,"",1);
-		makenode("*",v);
+		$$ = makenode("*(Pointer)",v);
 	}
 	;
 
@@ -636,19 +731,19 @@ parameter_type_list
 	| parameter_list ',' ELLIPSIS{
 		vector<data> v;
 		insertAttr(v,$1,"",1);
-		insertAttr(v,makeleaf($3),"",1);
+		insertAttr(v, makeleaf($3), "", 1);
 		$$ = makenode("parameter_type_list",v);
 	}
 	;
 
 parameter_list
 	: parameter_declaration{
-		$$ =$1 ;
+		$$ = $1;
 	}
 	| parameter_list ',' parameter_declaration{
 		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $3, "", 1);
 		$$ = makenode("parameter_list",v);
 	}
 	;
@@ -656,18 +751,18 @@ parameter_list
 parameter_declaration
 	: declaration_specifiers declarator{
 		vector<data> v;
-		// insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
 		$$ = makenode("parameter_declaration",v);
 	}
 	| declaration_specifiers abstract_declarator{
 		vector<data> v;
-		// insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
 		$$ = makenode("parameter_declaration",v);
 	}
 	| declaration_specifiers {
-		$$ = NULL;
+		$$ = $1;
 	}
 	;
 
@@ -679,7 +774,7 @@ identifier_list
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,makeleaf($3),"",1);
-		$$ = makenode("type_qualifier_list",v);
+		$$ = makenode("identifier_list",v);
 	}
 	;
 
@@ -715,40 +810,44 @@ direct_abstract_declarator
 		$$ = $2;
 	}
 	| '[' ']'{
-		$$ = makeleaf("[]") ;
+		$$ = makeleaf("[ ]") ;
 	}
 	| '[' constant_expression ']' {
-		$$ =$2;
+		$$ = $2;
 	}
 	| direct_abstract_declarator '[' ']' {
 		vector<data> v;
-		insertAttr(v,NULL,"[]",0);
+		insertAttr(v,NULL,"[ ]",0);
 		insertAttr(v,$1,"",1);
 		$$ = makenode("direct_abstract_declarator",v);
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
-		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = makenode("[]",v);
+		vector<data> v, v2;
+		insertAttr(v2, $3, NULL, 1);
+		treeNode* node = makenode("[ ]", v2);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, node, "", 1);
+		$$ = makenode("direct_abstract_declarator", v);
 	}
 	| '(' ')'{
-		$$ = makeleaf("()") ;
+		$$ = makeleaf("( )") ;
 	}
 	| '(' parameter_type_list ')'{
-		$$ =$2 ;
+		$$ = $2 ;
 	}
 	| direct_abstract_declarator '(' ')'{
 		vector<data> v;
-		insertAttr(v,NULL,"()",0);
-		insertAttr(v,$1,"",1);
+		insertAttr(v, NULL, "( )", 0);
+		insertAttr(v, $1, "", 1);
 		$$ = makenode("direct_abstract_declarator",v);
 	}
 	| direct_abstract_declarator '(' parameter_type_list ')'{
-		vector<data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = makenode("()",v);
+		vector<data> v, v2;
+		insertAttr(v2, $3, "", 1);
+		treeNode* node = makenode("( )", v2);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, node, "", 1);
+		$$ = makenode("direct_abstract_declarator", v);
 	}
 	;
 
@@ -760,10 +859,7 @@ initializer
 		$$ = $2 ;
 	}
 	| '{' initializer_list ',' '}'{
-		vector<data> v;
-		insertAttr(v,NULL,",",0);
-		insertAttr(v,$2,"",1);
-		$$ = makenode("initializer",v);
+		$$ = $2;
 	}
 	;
 
@@ -776,7 +872,7 @@ initializer_list
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		makenode("initializer_list", v);
+		$$ = makenode("initializer_list", v);
 	}
 	;
 
@@ -798,7 +894,6 @@ labeled_statement
 	}
 	| CASE constant_expression ':' statement	{
 		vector<data> v;
-		//insertAttr(v, NULL, "case", 0);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("case", v);
@@ -812,7 +907,7 @@ labeled_statement
 	;
 
 compound_statement
-	: '{' '}'	{$$ = makeleaf("{}");}
+	: '{' '}'	{$$ = makeleaf("{ }");}
 	| '{' statement_list '}'	{$$ = $2;}
 	| '{' declaration_list '}'	{$$ = $2;}
 	| '{' declaration_list statement_list '}'	{
@@ -853,66 +948,66 @@ selection_statement
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = makenode("if (expr) then stmt", v);
+		$$ = makenode("if", v);
 	}
 	| IF '(' expression ')' statement ELSE statement	{
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		insertAttr(v, $7, "", 1);
-		$$ = makenode("if (expr) then stmt else stmt", v);
+		$$ = makenode("if-else", v);
 	}
 	| SWITCH '(' expression ')' statement	{
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = makenode("switch (expr) stmt", v);
+		$$ = makenode("switch", v);
 	}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement	{
 		vector<data> v;
-                insertAttr(v, $3, "", 1);
-                insertAttr(v, $5, "", 1);
-                $$ = makenode("while (expr) stmt", v);
+		insertAttr(v, $3, "", 1);
+		insertAttr(v, $5, "", 1);
+		$$ = makenode("while-loop", v);
 	}
 	| DO statement WHILE '(' expression ')' ';'	{
 		vector<data> v;
-                insertAttr(v, $2, "", 1);
-                insertAttr(v, $5, "", 1);
-                $$ = makenode("so stmt while (expr)", v);
+		insertAttr(v, $2, "", 1);
+		insertAttr(v, $5, "", 1);
+		$$ = makenode("do-while-loop", v);
 	}
 	| FOR '(' expression_statement expression_statement ')' statement	{
 		vector<data> v;
-                insertAttr(v, $3, "", 1);
-                insertAttr(v, $4, "", 1);
+		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
 		insertAttr(v, $6, "", 1);
-                $$ = makenode("for (expr_stmt expr_stmt) stmt", v);
+		$$ = makenode("for-loop(w/o update stmt)", v);
 	}
 	| FOR '(' expression_statement expression_statement expression ')' statement	{
 		vector<data> v;
-                insertAttr(v, $3, "", 1);
-                insertAttr(v, $4, "", 1);
-                insertAttr(v, $5, "", 1);
+		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
+		insertAttr(v, $5, "", 1);
 		insertAttr(v, $7, "", 1);
-                $$ = makenode("for (expr_stmt expr_stmt expr) stmt", v);
+		$$ = makenode("for-loop", v);
 	}
 	;
 
+		 
 jump_statement
 	: GOTO IDENTIFIER ';'	{
-		vector<data> v;
-        insertAttr(v, NULL, "goto", 0);
-		insertAttr(v, makeleaf($2), "", 1);
-        $$ = makenode("jump_stmt", v);
+		string s;
+		s = (string)$1 + " : " + (string)$2;
+        $$ = makeleaf(s);
 	}
-	| CONTINUE ';'	{$$ = makeleaf("continue");}
-	| BREAK ';'	{$$ = makeleaf("break");}
-	| RETURN ';'	{ $$ = makeleaf("return");}
+	| CONTINUE ';'	{$$ = makeleaf($1);}
+	| BREAK ';'		{$$ = makeleaf($1);}
+	| RETURN ';'	{$$ = makeleaf($1);}
 	| RETURN expression ';'	{
 		vector<data> v;
-		insertAttr(v, NULL, "return", 0);
+		insertAttr(v, makeleaf($1), "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("jump_stmt", v);
 	}
@@ -926,7 +1021,7 @@ translation_unit
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = makenode("translation_unit", v);
+		$$ = makenode("program", v);
 	}
 	;
 
@@ -938,48 +1033,100 @@ external_declaration
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement	{
 		vector<data> v;
-		// insertAttr(v, $1, "", 1);
+		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = makenode("func_defn (whole)", v);
+		$$ = makenode("function", v);
 	}
 	| declaration_specifiers declarator compound_statement	{
 		vector<data> v;
-		// insertAttr(v, $1, "", 1);
+		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = makenode("func_defn (without decl_list)", v);
+		$$ = makenode("function (w/o decl_list)", v);
 	}
 	| declarator declaration_list compound_statement	{
 		vector<data> v;
                 insertAttr(v, $1, "", 1);
                 insertAttr(v, $2, "", 1);
                 insertAttr(v, $3, "", 1);
-                $$ = makenode("func_defn (without specifiers)", v);
+                $$ = makenode("function (w/o decl_specifiers)", v);
 	}
 	| declarator compound_statement	{
 		vector<data> v;
-                insertAttr(v, $1, "", 1);
-                insertAttr(v, $2, "", 1);
-                $$ = makenode("func_defn (without specifiers and decl_list)", v);
+		insertAttr(v, $1, "", 1);
+		insertAttr(v, $2, "", 1);
+		$$ = makenode("function (w/o specifiers and decl_list)", v);
 	}
 	;
 
 %%
 
+void print_options(){
+	// To be constructed later
+	cout<<"\t--help\t\t\tDisplay available options\n";
+
+	cout<<"\n\n";
+}
+
+void no_file_present(){
+	cout<<"Error: no input files\nCompilation terminated\n";
+}
+
+
 int main(int argc, char* argv[]){
 	
+	char* file_name = "graph.dot";
+	int file_present = 0;
+
 	if(argc <= 1){
-		cout<<"Error: no input files\n";
+		no_file_present();
 		return -1;
 	}
 	
-	dotfile = fopen("abc.dot", "w");
+	for(int i = 1; i<argc; i++){
+		if(!strcmp(argv[i], "--help")){
+			print_options();
+			return 0;
+		}
+	}
+
+	for(int i = 1; i<argc; i++){
+		if(!strcmp(argv[i], "-o")){
+			if(i+1 >= argc || argv[i+1][0] == '-'){
+				cout<<"Error: missing filename after \'-o\'\nCompilation terminated\n";
+				return -1;
+			}
+			else{
+				file_name = argv[i+1];
+				i++;
+			}
+		}
+		else if(argv[i][0] != '-') file_present++;
+	}
+
+	if(!file_present){
+		no_file_present();
+		return -1;
+	}
+
+	dotfile = fopen(file_name, "w");
+	
+	if(dotfile == NULL){
+		cout<<"Error: cannot open the dot file "<<file_name<<"\nCompilation terminated\n";
+		return -1;
+	}
+
 	beginAST();
 	
 
 	for(int i = 1; i<argc; i++){
+		if(!strcmp(argv[i], "-o")){
+			i++;
+			continue;
+		}
+
 		yyin = fopen(argv[i], "r");
 		
 		// File open failed, proceeding to next file(s), if exist
@@ -990,16 +1137,14 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
-		
 	}
 
 	endAST();
 
 	return 0;
-} 
-
+}
 
 int yyerror(char *s) { 
-  printf ("ERROR: %s in [%s] on line# %d column# %d\n", s, yytext, line, column+1);
-  return 0;
+	printf("ERROR: %s in [%s] on line# %d column# %d\n", s, yytext, line, column+1);
+  	return 0;
 }
