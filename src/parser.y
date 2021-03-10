@@ -15,7 +15,7 @@ char* curr_file;
 extern int yylex();
 extern int yyrestart(FILE*);
 extern FILE* yyin;
-#define YYERROR_VERBOSE 1
+#define YYERROR_VERBOSE
 %}
 
 %union{
@@ -73,7 +73,7 @@ postfix_expression
 		$$ = $1;
 	}
 	| postfix_expression '[' expression ']' {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("postfix_expression", attr);
@@ -82,31 +82,31 @@ postfix_expression
 		$$ = $1;
 	}
 	| postfix_expression '(' argument_expression_list ')' {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("postfix_expression", attr);
 	}
 	| postfix_expression '.' IDENTIFIER {
 		// TODO
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, makeleaf($3), "", 1);
 		$$ = makenode("expression.id", attr);
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, makeleaf($3), "", 1);
 		$$ = makenode($2, attr);
 	}
 	| postfix_expression INC_OP {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = makenode($2, attr);
 	}
 	| postfix_expression DEC_OP {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = makenode($2, attr);
 	}
@@ -117,7 +117,7 @@ argument_expression_list
 		$$ = $1;
 	}
 	| argument_expression_list ',' assignment_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("argument_list", attr);
@@ -129,28 +129,28 @@ unary_expression
 		$$ = $1;
 	}
 	| INC_OP unary_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
 	}
 	| DEC_OP unary_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
 	}
 	| unary_operator cast_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode("unary_exp",attr);
 	}
 	| SIZEOF unary_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
 	}
 	| SIZEOF '(' type_name ')' {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
 	}
@@ -182,7 +182,7 @@ cast_expression
 		$$ = $1;
 	}
 	| '(' type_name ')' cast_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
 		$$ = makenode("cast_expression" ,attr);
@@ -194,19 +194,19 @@ multiplicative_expression
 		$$ = $1;
 	}
 	| multiplicative_expression '*' cast_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("*" ,attr);
 	}
 	| multiplicative_expression '/' cast_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("/" ,attr);
 	}
 	| multiplicative_expression '%' cast_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("%" ,attr);
@@ -218,13 +218,13 @@ additive_expression
 		$$ = $1;
 	}
 	| additive_expression '+' multiplicative_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("+" ,attr);
 	}
 	| additive_expression '-' multiplicative_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("-" ,attr);
@@ -236,13 +236,13 @@ shift_expression
 		$$ = $1;
 	}
 	| shift_expression LEFT_OP additive_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
 	}
 	| shift_expression RIGHT_OP additive_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
@@ -254,25 +254,25 @@ relational_expression
 		$$ = $1;
 	}
 	| relational_expression '<' shift_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("<" ,attr);
 	}
 	| relational_expression '>' shift_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode(">" ,attr);
 	}
 	| relational_expression LE_OP shift_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
 	}
 	| relational_expression GE_OP shift_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
@@ -284,13 +284,13 @@ equality_expression
 		$$ = $1;
 	}
 	| equality_expression EQ_OP relational_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
 	}
 	| equality_expression NE_OP relational_expression {
-		vector<data> attr = createVector();
+		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($2 ,attr);
