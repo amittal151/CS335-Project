@@ -16,4 +16,4 @@ clean:
 	rm -rf $(BIN)/ 
 
 allclean: clean
-	rm -f lexer.cpp parser.hpp parser.cpp
+	rm -f $(SRC)/lexer.cpp $(SRC)/parser.hpp $(SRC)/parser.cpp

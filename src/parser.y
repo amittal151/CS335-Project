@@ -1141,7 +1141,6 @@ int main(int argc, char* argv[]){
 		lexer_file = fopen(lexer_file_name, "w");
 
 		if(lexer_file == NULL){
-			cout<<lexer_file_name<<" ";
 			print_error();
 			cout<<"cannot open file "<<lexer_file_name<<"\nCompilation terminated\n";
 			return -1;
@@ -1161,7 +1160,7 @@ int main(int argc, char* argv[]){
 				cout<<"cannot open file "<<argv[i]<<"\n\n";
 				continue;
 			}
-
+			line = 1, column = 0;
 			yyrestart(yyin);
 			
 			fprintf(lexer_file, "----------Lexer Output for file %s----------\n", argv[i]);
@@ -1200,9 +1199,13 @@ int main(int argc, char* argv[]){
 			cout<<"cannot open file "<<argv[i]<<"\n\n";
 			continue;
 		}
+
+		line = 1, column = 0;
 		curr_file = argv[i];
+		
 		yyrestart(yyin);
 		yyparse();
+		
 	}
 
 	endAST();
@@ -1211,23 +1214,21 @@ int main(int argc, char* argv[]){
 
 int yyerror(const char *s) { 
 	FILE *dupfile = fopen(curr_file, "r");
-
 	int count = 1;
 
 	char currline[256]; /* or other suitable maximum line size */
 	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
 		if (count == line){
-			cout<<curr_file<<":"<<line<<":"<<column<<":: "<<curr_file<<"\n";
+			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
 			print_error();
-			cout<<s<<"\n";
+			cout<<s<<"\n\n";
 			return -1;
 		}
 		else{
 			count++;
 		}
 	}
-	fclose(dupfile);
-	
 
+	fclose(dupfile);
 	return -1;
 }

@@ -126,7 +126,7 @@ L?\"(\\.|[^\\"])*\"	{ if( only_lexer ) fprintf(lexer_file,"STRING_LITERAL\t"); y
 "?"			{ if( only_lexer ) fprintf(lexer_file,"?\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('?'); }
 
 [ \t\v\n\f]		{ count(0); }
-.			{ return -1; }
+.			{ if( only_lexer ) fprintf(lexer_file, "Unknown character\(s\): %s\n", yytext); return -1;}
 
 %%
 
