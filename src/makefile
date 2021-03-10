@@ -2,18 +2,18 @@ CC=g++ -w
 BIN=../bin
 SRC=.
 
-$(BIN)/lexer:	lexer.cpp 	parser.cpp	AST.cpp
+$(BIN)/parser: $(SRC)/parser.cpp $(SRC)/lexer.cpp $(SRC)/AST.cpp
 	mkdir -p $(BIN)
 	$(CC) -o $@ $^
 
-lexer.cpp:	lexer.l parser.hpp
-	flex -o lexer.cpp lexer.l
+$(SRC)/lexer.cpp: $(SRC)/lexer.l
+	flex -o $@ $^
 	
-parser.hpp: parser.y
-	bison -d -o parser.cpp parser.y
+$(SRC)/parser.cpp: $(SRC)/parser.y
+	bison -d -o $@ $^
 
 clean:
 	rm -rf $(BIN)/ 
 
-allclean:	clean
+allclean: clean
 	rm -f lexer.cpp parser.hpp parser.cpp

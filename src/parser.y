@@ -5,13 +5,17 @@
 extern char* yytext;
 extern int column;
 extern int line;
-int yyerror(char*);
+int yyerror(const char*);
 int yylex();
+int only_lexer = 0;
 FILE* dotfile;
+FILE* lexer_file;
+char* curr_file;
 
 extern int yylex();
 extern int yyrestart(FILE*);
 extern FILE* yyin;
+#define YYERROR_VERBOSE 1
 %}
 
 %union{
@@ -1063,21 +1067,30 @@ function_definition
 
 %%
 
+void print_error(){
+	cout<<"\033[1;31mError: \033[0m";
+}
+
 void print_options(){
 	// To be constructed later
+	cout<<"Usage: parser [OPTIONS] file...\n\n";
+	cout<<"Options:\n";
 	cout<<"\t--help\t\t\tDisplay available options\n";
-
+	cout<<"\t-l <file>\t\tonly runs the lexer and dumps output in <file>\n";
+	cout<<"\t-o <file>\t\tdump the dot script generated in <file>\n";
 	cout<<"\n\n";
 }
 
 void no_file_present(){
-	cout<<"Error: no input files\nCompilation terminated\n";
+	print_error();
+	cout<<"no input files\nCompilation terminated\n";
 }
+
 
 
 int main(int argc, char* argv[]){
 	
-	char* file_name = "graph.dot";
+	char* file_name = "graph.dot", *lexer_file_name;
 	int file_present = 0;
 
 	if(argc <= 1){
@@ -1095,11 +1108,24 @@ int main(int argc, char* argv[]){
 	for(int i = 1; i<argc; i++){
 		if(!strcmp(argv[i], "-o")){
 			if(i+1 >= argc || argv[i+1][0] == '-'){
-				cout<<"Error: missing filename after \'-o\'\nCompilation terminated\n";
+				print_error();
+				cout<<"missing filename after \'-o\'\nCompilation terminated\n";
 				return -1;
 			}
 			else{
 				file_name = argv[i+1];
+				i++;
+			}
+		}
+		else if(!strcmp(argv[i], "-l")){
+			if(i+1 >= argc || argv[i+1][0] == '-'){
+				print_error();
+				cout<<"missing filename after \'-l\'\nCompilation terminated\n";
+				return -1;
+			}
+			else{
+				only_lexer = 1;
+				lexer_file_name = argv[i+1];
 				i++;
 			}
 		}
@@ -1111,16 +1137,55 @@ int main(int argc, char* argv[]){
 		return -1;
 	}
 
+	if( only_lexer ){
+		lexer_file = fopen(lexer_file_name, "w");
+
+		if(lexer_file == NULL){
+			cout<<lexer_file_name<<" ";
+			print_error();
+			cout<<"cannot open file "<<lexer_file_name<<"\nCompilation terminated\n";
+			return -1;
+		}
+
+		for(int i = 1; i<argc; i++){
+			if(!strcmp(argv[i], "-o") || !strcmp(argv[i], "-l")){
+				i++;
+				continue;
+			}
+
+			yyin = fopen(argv[i], "r");
+			
+			// File open failed, proceeding to next file(s), if exist
+			if(yyin == NULL){
+				print_error();
+				cout<<"cannot open file "<<argv[i]<<"\n\n";
+				continue;
+			}
+
+			yyrestart(yyin);
+			
+			fprintf(lexer_file, "----------Lexer Output for file %s----------\n", argv[i]);
+			fprintf(lexer_file, "TOKEN\t\t\tLEXEME\t\t\tLINE#\tCOLUMN#\n");
+			while( yylex() > 0 ){
+
+			}
+			fprintf(lexer_file, "------------------------END of Output---------------------\n\n");
+		}
+
+		return 0;
+
+	}
+
 	dotfile = fopen(file_name, "w");
 	
 	if(dotfile == NULL){
-		cout<<"Error: cannot open the dot file "<<file_name<<"\nCompilation terminated\n";
+		print_error();
+		cout<<"cannot open the dot file "<<file_name<<"\nCompilation terminated\n";
 		return -1;
 	}
 
 	beginAST();
 	
-
 	for(int i = 1; i<argc; i++){
 		if(!strcmp(argv[i], "-o")){
 			i++;
@@ -1131,20 +1196,38 @@ int main(int argc, char* argv[]){
 		
 		// File open failed, proceeding to next file(s), if exist
 		if(yyin == NULL){
-			cout<<"Error: cannot open file "<<argv[i]<<"\n\n";
+			print_error();
+			cout<<"cannot open file "<<argv[i]<<"\n\n";
 			continue;
 		}
-		
+		curr_file = argv[i];
 		yyrestart(yyin);
 		yyparse();
 	}
 
 	endAST();
-
 	return 0;
 }
 
-int yyerror(char *s) { 
-	printf("ERROR: %s in [%s] on line# %d column# %d\n", s, yytext, line, column+1);
-  	return 0;
+int yyerror(const char *s) { 
+	FILE *dupfile = fopen(curr_file, "r");
+
+	int count = 1;
+
+	char currline[256]; /* or other suitable maximum line size */
+	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
+		if (count == line){
+			cout<<curr_file<<":"<<line<<":"<<column<<":: "<<curr_file<<"\n";
+			print_error();
+			cout<<s<<"\n";
+			return -1;
+		}
+		else{
+			count++;
+		}
+	}
+	fclose(dupfile);
+	
+
+	return -1;
 }
