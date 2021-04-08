@@ -4,18 +4,37 @@ using namespace std;
 
 typedef struct{
 	long unsigned int node_id;
+	long long int size;
 	string node_name;
-	long long intVal;
-	long long realVal;
+	string type;
+	int expType;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
+	int isInit;
+	long long int intVal;
+	long double realVal;
 	char charVal;
 	string strVal;
+
+	string temp_name;
 }treeNode;
+
+
+typedef struct{
+	string str;
+	string type;
+	long long int intVal;
+	long double realVal;
+	char charVal;
+	string strVal;
+}constants;
+
 
 typedef struct{
 	treeNode* node;
 	string str;
 	bool is_node;
 }data;
+
+
 
 
 void beginAST();
