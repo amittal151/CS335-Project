@@ -1,8 +1,8 @@
-CC=g++ -w 
+CC=g++ -std=c++14 -w -g
 BIN=../bin
 SRC=.
 
-$(BIN)/parser: $(SRC)/parser.cpp $(SRC)/lexer.cpp $(SRC)/AST.cpp
+$(BIN)/parser: $(SRC)/parser.cpp $(SRC)/lexer.cpp $(SRC)/AST.cpp $(SRC)/symbol_table.cpp $(SRC)/typecheck.cpp
 	mkdir -p $(BIN)
 	$(CC) -o $@ $^
 
