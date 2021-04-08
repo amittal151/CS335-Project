@@ -33,7 +33,7 @@ Steps to Build and Run Parser (in terminal):
 1. cd src
 2. make
 3. cd ..
-4. ./bin/parser ./tests/test1.c 
+4. ./bin/parser ./tests/test11.c 
 5. cat <func_name>.csv  // To view the Symbol table of Function <func_name>
 ```
 
