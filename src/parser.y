@@ -211,7 +211,6 @@ postfix_expression
 		$$ = makenode("expression.id", attr);
 
 		//Semantics
-		cout<<"I AM HERE\n"<<$1->temp_name<<$1->type<<endl;
 		string temp = string($3);
 		int ret = lookupStruct($1->type,temp);
 		if(ret == -1){
@@ -366,9 +365,7 @@ unary_expression
 
 		//Semantic
 		$$->isInit = $2->isInit;
-		cout<<$2->type<<$1->temp_name<<endl;
 		string temp = unaryExp($1->node_name,$2->type);
-		cout<<"Temp "<<temp<<endl;
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal;
@@ -2174,7 +2171,7 @@ int main(int argc, char* argv[]){
 
 	endAST();
 
-	printSymbolTable(&gst, "GST.csv");
+	printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
 	return 0;
 }
 

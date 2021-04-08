@@ -26,6 +26,19 @@ Steps to Build and Run Parser (in terminal):
 5. dot -Tps myAST.dot -o image.ps   // to render the AST generated
 ```
 
+
+## Milestone 3: Semantic Analysis
+```
+Steps to Build and Run Parser (in terminal):
+1. cd src
+2. make
+3. cd ..
+4. ./bin/parser ./tests/test1.c 
+5. cat <func_name>.csv  // To view the Symbol table of Function <func_name>
+```
+
+The compiler dumps the symbol table of each function and struct defined. We also dump the Global Symbol Table in a file "#Global_Symbol_Table#.csv". If there is any error in the program, compiler gives an appropriate error and stops compilation.
+
 The C Lex specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-l.html)
 
 The C Grammar specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html)

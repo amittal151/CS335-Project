@@ -20,6 +20,7 @@ int main()
    int x2 = sizeof(s1);
    struct struct1 *s;
    struct node *u;
+   (*s).wNo = 2;
    s = u; // we comparing struct with union
    return 0;
 }

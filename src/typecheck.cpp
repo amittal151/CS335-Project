@@ -132,7 +132,6 @@ string bitExp(string a, string b){
 }
 
 string assignExp(string a, string b, string op){
-    // cout<<a<<" "<<b<<" "<<op<<endl;
     if(op=="="){
         return checkType(a,b);
     }
