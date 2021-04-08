@@ -211,11 +211,12 @@ postfix_expression
 		$$ = makenode("expression.id", attr);
 
 		//Semantics
+		cout<<"I AM HERE\n"<<$1->temp_name<<$1->type<<endl;
 		string temp = string($3);
 		int ret = lookupStruct($1->type,temp);
 		if(ret == -1){
 			//TODO
-			yyerror(("Struct " + $1->temp_name + " not defined").c_str());
+			yyerror(("Struct " + $1->node_name + " not defined").c_str());
 		}
 		else if (ret == 0){
 			//TODO
@@ -236,7 +237,7 @@ postfix_expression
 		string temp = string($3);
 		string temp1 = ($1->type);
 		if(temp1.back() != '*'){
-			yyerror(($1->temp_name + " is not a pointer, did you mean to use '.' ").c_str());
+			yyerror(( $1->node_name + " is not a pointer, did you mean to use '.' ").c_str());
 		}
 		else temp1.pop_back();
 
@@ -365,8 +366,9 @@ unary_expression
 
 		//Semantic
 		$$->isInit = $2->isInit;
-
-		string temp = unaryExp($1->temp_name,$2->type);
+		cout<<$2->type<<$1->temp_name<<endl;
+		string temp = unaryExp($1->node_name,$2->type);
+		cout<<"Temp "<<temp<<endl;
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal;
@@ -1325,11 +1327,13 @@ declarator
 			$$->type = "STRUCT_" + structName + $1->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 8;
+			$$->expType = 2;
 		}
 		else{
 			$$->type = $2->type + $1->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 8;
+			$$->expType = 2;
 		}
 		
 	}
@@ -2184,8 +2188,9 @@ int yyerror(const char* s) {
 			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
 			print_error();
 			cout<<s<<"\n\n";
-			//ToDo  exit(0);
-			return -1;
+			cout<<"\033[1;34m Compilation terminated...exiting\033[0m"<<endl;
+			exit(0);
+			// return -1;
 		}
 		else{
 			count++;

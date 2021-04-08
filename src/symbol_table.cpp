@@ -12,6 +12,12 @@ sym_table* curr_table; //store pointer of the current symbol table
 sym_table* curr_structure;
 struct_sym_table *curr_struct_table;
 stack<ull> Goffset, Loffset, blockSz;
+
+typ_table typ_gst;  //map<string, string> typ_table;
+map<typ_table*, typ_table*> typ_parent_table;
+typ_table* curr_typ;
+
+
 int struct_count = 1;
 int avl=0;
 
@@ -25,6 +31,7 @@ void symTable_init(){
 	struct_parent_table.insert(make_pair(&struct_gst, nullptr));
 	curr_table = &gst;
 	curr_struct_table = &struct_gst;
+	curr_typ = &typ_gst;
 	insertKeywords();
 }
 
@@ -43,6 +50,7 @@ void makeSymbolTable(string name, string f_type){
 	if(!avl){
 		sym_table* new_table = new sym_table;
 		struct_sym_table* new_struct_table = new struct_sym_table;
+		typ_table* new_typ = new typ_table;
 
 		if(f_type != "") insertSymbol(*curr_table, name , "FUNC_" + f_type , 0 , 1, new_table);
 		else{
@@ -54,9 +62,11 @@ void makeSymbolTable(string name, string f_type){
 		blockSz.push(0);
 		parent_table.insert(make_pair(new_table, curr_table));
 		struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));
+		typ_parent_table.insert(make_pair(new_typ, curr_typ));
 
 		curr_table = new_table;
 		curr_struct_table = new_struct_table;
+		curr_typ = new_typ;
 
 	}
 	else{
@@ -82,6 +92,7 @@ void updSymbolTable(string id){
 
 	curr_table = parent_table[curr_table];
 	curr_struct_table = struct_parent_table[curr_struct_table];
+	curr_typ = typ_parent_table[curr_typ];
 
 	sym_entry* entry = lookup(id);
 	if(entry) entry->size = blockSz.top();
@@ -245,6 +256,26 @@ void updTableSize(string id){
 
 void insertFuncArg(string &func, vector<string> &arg){
 	func_arg.insert(make_pair(func, arg));
+}
+
+void insertType(string a, string b){
+	if((*curr_typ).find(b)==(*curr_typ).end()){
+		(*curr_typ).insert(make_pair(a,b));
+	}
+	else{
+		(*curr_typ).insert(make_pair(a, (*curr_typ)[b]));
+	}
+}
+
+string lookupType(string a){
+	typ_table* temp = curr_typ;
+
+	while(temp){
+		if((*temp).find(a)==(*temp).end()) return (*temp)[a];
+		temp = typ_parent_table[temp];
+	}
+
+	return "";
 }
 
 void printFuncArg(){

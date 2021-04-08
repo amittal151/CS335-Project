@@ -16,6 +16,7 @@ typedef struct sym_entry{
 
 typedef map<string, sym_entry* > sym_table; 
 typedef map<string, pair< ull, sym_table* > > struct_sym_table;
+typedef map<string, string> typ_table;
 
 extern sym_table gst;
 extern struct_sym_table struct_gst;
@@ -30,6 +31,12 @@ extern sym_table* curr_structure;
 extern struct_sym_table *curr_struct_table;
 extern stack<ull> Goffset, Loffset, blockSz;
 extern int avl;
+
+//map<string, string> typ_table;
+extern typ_table typ_gst;  
+extern map<typ_table*, typ_table*> typ_parent_table;
+extern typ_table* curr_typ;
+
 
 
 void symTable_init();
@@ -56,3 +63,5 @@ void insertFuncArg(string &func, vector<string> &arg);
 void printFuncArg();
 void printSymbolTable(sym_table* table, string file_name);
 ull getSize(string id);
+string lookupType(string a);
+void insertType(string a, string b);
