@@ -40,7 +40,6 @@ sym_entry* createEntry(string type, ull size, bool init, ull offset, sym_table* 
 }
 
 void makeSymbolTable(string name, string f_type){
-
 	if(!avl){
 		sym_table* new_table = new sym_table;
 		struct_sym_table* new_struct_table = new struct_sym_table;
@@ -71,8 +70,8 @@ void makeSymbolTable(string name, string f_type){
 void removeFuncProto(){
 	avl = 0;
 	updSymbolTable("dummyF_name");
-	parent_table.erase(gst["dummyF_name"]->entry);
-	gst.erase("dummyF_name");
+	parent_table.erase((*curr_table)["dummyF_name"]->entry);
+	(*curr_table).erase("dummyF_name");
 	Loffset.pop();
 }
 
@@ -127,6 +126,7 @@ string getType(string id){
 	
 	return ret;
 }
+
 
 void createStructTable(){
 	sym_table* new_table = new sym_table;

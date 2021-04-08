@@ -11,12 +11,15 @@ IS			(u|U|l|L)*
 using namespace std;
 #include "AST.h"
 #include "parser.hpp"
+#include "typecheck.h"
 
 void count(int);
 int check_type();
 void comment();
 int error_handler();
 void print_options();
+void set_int_type(int);
+void set_real_type();
 int column = 0;
 int line = 1;
 
@@ -67,16 +70,16 @@ extern FILE* lexer_file;
 
 {L}({L}|{D})*		{ if( only_lexer ) fprintf(lexer_file,"IDENTIFIER\t\t"); yylval.str = strdup(yytext); count(1); return(check_type()); }
 
-0[xX]{H}+{IS}?		{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
-0{D}+{IS}?		{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
-{D}+{IS}?		{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
+0[xX]{H}+{IS}?		{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_int_type(3); count(1); return(CONSTANT); }
+0{D}+{IS}?			{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_int_type(2); count(1); return(CONSTANT); }
+{D}+{IS}?			{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_int_type(1); count(1); return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_int_type(0); count(1); return(CONSTANT); }
 
-{D}+{E}{FS}?		{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); yylval.str = strdup(yytext); count(1); return(CONSTANT); }
+{D}+{E}{FS}?			{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_real_type(); count(1); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_real_type(); count(1); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?	{ if( only_lexer ) fprintf(lexer_file,"CONSTANT\t\t"); set_real_type(); count(1); return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ if( only_lexer ) fprintf(lexer_file,"STRING_LITERAL\t"); yylval.str = strdup(yytext); count(1); return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"		{ if( only_lexer ) fprintf(lexer_file,"STRING_LITERAL\t"); yylval.str = strdup(yytext); count(1); return(STRING_LITERAL); }
 
 "..."			{ if( only_lexer ) fprintf(lexer_file,"ELLIPSIS\t\t"); yylval.str = strdup(yytext); count(1); return(ELLIPSIS); }
 ">>="			{ if( only_lexer ) fprintf(lexer_file,"RIGHT_ASSIGN\t\t"); yylval.str = strdup(yytext); count(1); return(RIGHT_ASSIGN); }
@@ -154,17 +157,41 @@ void count(int flag)
 			column++;
 }
 
+void set_int_type(int t){
+	// 3-> Hexa, 2-> Octal, 1-> decimal, 0-> Char
+	yylval.num = new constants ;
+	yylval.num->str = strdup(yytext);
+	yylval.num->type = string("long long");
+	switch(t){
+		case 0 : {
+			sscanf(yytext, "%d", &(yylval.num->intVal));
+			break;
+		}
+		case 1 : {
+			sscanf(yytext, "%lld", &(yylval.num->intVal));
+			break;
+		}
+		case 2 : {
+			sscanf(yytext, "%llo", &(yylval.num->intVal));
+			break;
+		}
+		case 3 : {
+			sscanf(yytext, "%llx", &(yylval.num->intVal));
+			break;
+		}
+	}
+}
+
+void set_real_type(){
+	yylval.num = new constants ;
+	yylval.num->str = strdup(yytext);
+	yylval.num->type = string("long double");
+	sscanf(yytext, "%lf", &(yylval.num->realVal));
+}
 
 int check_type()
 {
-/*
-* pseudo code --- this is what it should check
-*
-*	if (yytext == type_name)
-*		return(TYPE_NAME);
-*
-*	return(IDENTIFIER);
-*/
+	
 
 /*
 *	it actually will only return IDENTIFIER
@@ -225,3 +252,23 @@ int check_type()
 // 	return 0;
 	
 // }
+
+
+
+// SYMBOL_TABLE
+// struct node;
+// STRUCT ENTRY		- {
+// 	vector<string>  int a, int b;
+// 	a - >int
+// 	b -> int
+// }
+// ENUM ENTRY 
+// TYPEDEF ENTRY 
+
+// STRUCT_symbol_table
+// enum_table
+
+// TypeMap -- node > STRUCT, node1 > ENUM, ll -> long long
+
+
+// map<string, sentry>

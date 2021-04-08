@@ -1,8 +1,5 @@
-// #include "symbol_table.h"
 #include "typecheck.h"
-// #include "symbol_table.h"
-// #include<bits/stdc++.h>
-// using nam
+
 
 string primaryExpression(string id) {
     sym_entry* n = lookup(id);

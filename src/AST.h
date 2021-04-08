@@ -11,7 +11,6 @@ typedef struct{
 	int isInit;
 	long long int intVal;
 	long double realVal;
-	char charVal;
 	string strVal;
 
 	string temp_name;
@@ -23,7 +22,6 @@ typedef struct{
 	string type;
 	long long int intVal;
 	long double realVal;
-	char charVal;
 	string strVal;
 }constants;
 
