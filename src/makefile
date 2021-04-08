@@ -1,4 +1,4 @@
-CC=g++ -std=c++14 -w -g
+CC=g++ -std=c++14 -w
 BIN=../bin
 SRC=.
 

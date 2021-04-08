@@ -2,4 +2,8 @@ lexer.cpp
 parser.*pp
 *.dot
 *.ps
+*.csv
 /bin/*
+.vscode
+*.csv
+*.out
