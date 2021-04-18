@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include "3ac.h"
 using namespace std;
 
 
@@ -14,6 +15,13 @@ typedef struct{
 	string strVal;
 
 	string temp_name;
+	qid place;
+	vector<int> truelist;
+	vector<int> falselist;
+	vector<int> breaklist;
+	vector<int> continuelist;
+	vector<int> nextlist;;
+	vector<int> caselist;
 }treeNode;
 
 

@@ -11,7 +11,6 @@ IS			(u|U|l|L)*
 using namespace std;
 #include "AST.h"
 #include "parser.hpp"
-#include "typecheck.h"
 
 void count(int);
 int check_type();

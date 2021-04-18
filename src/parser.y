@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <iostream>
 #include "AST.h"
-#include "typecheck.h"
 
 extern char* yytext;
 extern int column;
