@@ -1327,8 +1327,12 @@ assignment_expression
 				$$->type = $1->type;
 				warning("Assignment with incompatible pointer type");
 			} 
-			
-			// 3ac TODO 
+			//error check ???
+			// 3ac 
+			int num = assign_exp($2, $$->type, $1->type, $3->type, $1->place, $3->place);
+			$$->place = $1->place;
+			backpatch($3->nextlist, num);
+
 
 		}
 		else{
