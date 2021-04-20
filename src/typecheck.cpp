@@ -37,11 +37,11 @@ string postfixExpression(string type_name, int rule_num) {
             return "";
         }
         case 6:{
-            if(checkInt(type_name))return type_name;
+            if(isInt(type_name))return type_name;
             return "";
         }
         case 7:{
-            if(checkInt(type_name))return type_name;
+            if(isInt(type_name))return type_name;
             return "";
         }
         default : return "";
@@ -54,9 +54,9 @@ string checkType(string a, string b){
     if(a == b)return "ok";
     if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void"))return "ok";
     if(a.back()=='*' && b.back()=='*')return "warning";
-    if((checkInt(a) && b.back()=='*')||(checkInt(b)&&a.back()=='*'))return "warning";
-    if(a == "char" || checkInt(a)) a = "long double";
-    if(b == "char" || checkInt(b)) b = "long double";
+    if((isInt(a) && b.back()=='*')||(isInt(b)&&a.back()=='*'))return "warning";
+    if(a == "char" || isInt(a)) a = "long double";
+    if(b == "char" || isInt(b)) b = "long double";
     if(isFloat(a) && isFloat(b)) return "ok";
     return "";
 }
@@ -76,10 +76,10 @@ string unaryExp(string op, string type){
     if(op=="*") return postfixExpression(type, 1);
     else if(op == "&") type+="*";
     else if(op=="+" || op=="-"){
-        if(!(checkInt(type) || isFloat(type))) return "";
+        if(!(isInt(type) || isFloat(type))) return "";
     }
     else if(op=="~"){
-        if(!(checkInt(type) || type != "bool")) return "";
+        if(!(isInt(type) || type != "bool")) return "";
     }
     else if(op=="!" && type!="bool") return "";
     return type;
@@ -87,47 +87,47 @@ string unaryExp(string op, string type){
 
 string mulExp(string a, string b, char op){
     if(op=='*' || op =='/'){
-        if(checkInt(a) && checkInt(b)) return "int";
-        else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "float";
+        if(isInt(a) && isInt(b)) return "int";
+        else if((isInt(a) || isFloat(a)) && (isInt(b) || isFloat(b))) return "float";
         return "";
     }
     else if(op=='%'){
-        if(checkInt(a) && checkInt(b)) return "int";
+        if(isInt(a) && isInt(b)) return "int";
     }
     return "";
 }
 
 string addExp(string a, string b, char op){
-    if(checkInt(a) && checkInt(b)) return "int";
-    else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "real";
-    else if((checkInt(a) && b=="char") || (a=="char" && checkInt(b))) return "char";
-    else if(checkInt(a) && b.back()=='*') return b;
-    else if(a.back()=='*' && checkInt(b)) return a;
+    if(isInt(a) && isInt(b)) return "int";
+    else if((isInt(a) || isFloat(a)) && (isInt(b) || isFloat(b))) return "real";
+    else if((isInt(a) && b=="char") || (a=="char" && isInt(b))) return "char";
+    else if(isInt(a) && b.back()=='*') return b;
+    else if(a.back()=='*' && isInt(b)) return a;
     return "";
 }
 
 string shiftExp(string a, string b){
-    if(checkInt(a) && checkInt(b)) return "ok";
+    if(isInt(a) && isInt(b)) return "ok";
     return "";
 }
 
 string relExp(string a, string b){
-    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "bool";
-    if((checkInt(a) || a=="char") && b.back()=='*') return "Bool";
-    if((checkInt(b) || b=="char") && a.back()=='*') return "Bool";
+    if((isInt(a) || isFloat(a) || a=="char") && (isInt(b) || isFloat(b) ||b=="char")) return "bool";
+    if((isInt(a) || a=="char") && b.back()=='*') return "Bool";
+    if((isInt(b) || b=="char") && a.back()=='*') return "Bool";
     return "";
 }
 
 string eqExp(string a, string b){
     if(a==b) return "Ok";
-    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "Ok";
-    if((checkInt(a) && b.back()=='*') || (a.back()=='*' && checkInt(b))) return "ok";
+    if((isInt(a) || isFloat(a) || a=="char") && (isInt(b) || isFloat(b) ||b=="char")) return "Ok";
+    if((isInt(a) && b.back()=='*') || (a.back()=='*' && isInt(b))) return "ok";
     return "";
 }
 
 string bitExp(string a, string b){
     if(a=="bool" && b=="bool") return "ok";
-    if((a=="bool" || checkInt(a)) && (b=="bool" || checkInt(b))) return "Ok";
+    if((a=="bool" || isInt(a)) && (b=="bool" || isInt(b))) return "Ok";
     return "";
 }
 
@@ -156,14 +156,14 @@ string assignExp(string a, string b, string op){
 
 string condExp(string a,string b){
     if(a == b)return a;
-    if(a == "char"|| checkInt(a)) a = "long double";
-    if(b == "char"|| checkInt(b)) b = "long double";
+    if(a == "char"|| isInt(a)) a = "long double";
+    if(b == "char"|| isInt(b)) b = "long double";
     if(isFloat(a) && isFloat(b)) return "long double";
     if(a.back() == '*' && b.back() == '*')return "void*" ;
     return "";
 
 }
-int checkInt(string type1){
+int isInt(string type1){
    if(type1=="int") return 1;
    if(type1=="long") return 1;
    if(type1=="long long") return 1;
@@ -200,6 +200,12 @@ bool isFloat (string type){
    if(type=="signed double") return 1;
    if(type=="signed long double") return 1;
    return 0;
+}
+
+bool isVoid(string type){
+    if(type.length() < 4) return 0;
+    else if(type.substr(0,4) == "void") return 1;
+    else return 0;
 }
 
 // bool isSignedInt (string type){

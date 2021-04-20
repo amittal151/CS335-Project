@@ -16,5 +16,6 @@ string eqExp(string a, string b);
 string bitExp(string a, string b);
 string assignExp(string a, string b, string op);
 string condExp(string a,string b);
-int checkInt (string type1);
+int isInt (string type1);
 bool isFloat (string type);
+bool isVoid(string type);

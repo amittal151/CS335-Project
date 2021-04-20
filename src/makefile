@@ -1,4 +1,4 @@
-CC=g++ -std=c++14 -w
+CC=g++ -std=c++14 -w -g
 BIN=../bin
 SRC=.
 
@@ -10,7 +10,7 @@ $(SRC)/lexer.cpp: $(SRC)/lexer.l
 	flex -o $@ $^
 	
 $(SRC)/parser.cpp: $(SRC)/parser.y
-	bison -d -o $@ $^
+	bison -d --verbose -o $@ $^
 
 clean:
 	rm -rf $(BIN)/ 

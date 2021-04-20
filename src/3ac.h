@@ -16,6 +16,7 @@ typedef struct quadruple{
 
 void emit(qid, qid , qid , qid , int );
 void backpatch(vector<int>& , int);
+qid newtemp(string );
 
 // string getTmpVar();
 // pair<string, sEntry*> getTmpSym(string type);

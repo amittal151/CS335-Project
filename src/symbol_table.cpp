@@ -159,9 +159,9 @@ int insertStructAttr(string attr, string type, ull size, bool init){
 
 int printStructTable(string struct_name){
 	if((*curr_struct_table).find(struct_name)==(*curr_struct_table).end()){
-		//struct_parent_table.insert(make_pair(curr_structure, nullptr));
+		struct_parent_table.insert(make_pair(curr_struct_table, nullptr));
 		(*curr_struct_table).insert(make_pair(struct_name, make_pair(struct_offset,curr_structure)));
-		//struct_size.insert(make_pair(struct_name, struct_offset)); //TODO
+		struct_size.insert(make_pair(struct_name, struct_offset)); //TODO
 		printSymbolTable(curr_structure, struct_name+ "_" + to_string(struct_count)+".csv");  // prints structre symbol table
 		struct_count++;
 		return 1;
@@ -307,6 +307,7 @@ ull getSize(string id){
   if(id == "short") return sizeof(short);
   if(id == "short int") return sizeof(short int);
   if(id == "int") return sizeof(int);
+  if(id == "bool") return sizeof(bool);
   if(id == "long int") return sizeof(long int);
   if(id == "long long") return sizeof(long long);
   if(id == "long long int") return sizeof(long long int);
