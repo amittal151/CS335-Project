@@ -13,6 +13,7 @@ typedef struct{
 	long long int intVal;
 	long double realVal;
 	string strVal;
+	int is_error = 0;
 
 	string temp_name;
 	qid place;

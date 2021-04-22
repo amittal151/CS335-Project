@@ -5,7 +5,7 @@ struct_sym_table struct_gst;
 map<sym_table*, sym_table*> parent_table;
 map<struct_sym_table*, struct_sym_table*> struct_parent_table;
 
-map<string, ull> struct_size;
+// map<string, ull> struct_size;
 map<string, vector<string> > func_arg;
 ull struct_offset;
 sym_table* curr_table; //store pointer of the current symbol table
@@ -16,7 +16,7 @@ stack<ull> Goffset, Loffset, blockSz;
 typ_table typ_gst;  //map<string, string> typ_table;
 map<typ_table*, typ_table*> typ_parent_table;
 typ_table* curr_typ;
-
+ull max_size = 0;
 
 int struct_count = 1;
 int avl=0;
@@ -72,7 +72,7 @@ void makeSymbolTable(string name, string f_type){
 	else{
 		avl = 0;
 		(*parent_table[curr_table]).erase("dummyF_name");
-		(*parent_table[curr_table]).insert(make_pair(name,createEntry("FUNC_"+f_type,0,1,Loffset.top(), curr_table)));
+		(*parent_table[curr_table]).insert(make_pair(name, createEntry("FUNC_"+f_type,0,1,Loffset.top(), curr_table)));
 		Loffset.pop();
 	}
 }
@@ -150,7 +150,8 @@ int insertStructAttr(string attr, string type, ull size, bool init){
 	if((*curr_structure).find(attr)==(*curr_structure).end()){
 		blockSz.top()+=size;
 		Goffset.top()+=size;
-		(*curr_structure).insert(make_pair(attr,createEntry(type,size,init, struct_offset, nullptr)));
+		max_size = max(max_size, size);
+		(*curr_structure).insert(make_pair(attr, createEntry(type,size,init, struct_offset, nullptr)));
 		struct_offset += size;
 		return 1;
 	}
@@ -160,9 +161,10 @@ int insertStructAttr(string attr, string type, ull size, bool init){
 int printStructTable(string struct_name){
 	if((*curr_struct_table).find(struct_name)==(*curr_struct_table).end()){
 		struct_parent_table.insert(make_pair(curr_struct_table, nullptr));
-		(*curr_struct_table).insert(make_pair(struct_name, make_pair(struct_offset,curr_structure)));
-		struct_size.insert(make_pair(struct_name, struct_offset)); //TODO
-		printSymbolTable(curr_structure, struct_name+ "_" + to_string(struct_count)+".csv");  // prints structre symbol table
+		if(struct_name.substr(0, 6) == "struct")(*curr_struct_table).insert(make_pair(struct_name, make_pair(struct_offset,curr_structure)));
+		else (*curr_struct_table).insert(make_pair(struct_name, make_pair(max_size,curr_structure)));
+		max_size = 0;
+		printSymbolTable(curr_structure, struct_name + "_" + to_string(struct_count)+".csv");  // prints structre symbol table
 		struct_count++;
 		return 1;
 	}
@@ -180,8 +182,9 @@ string StructAttrType(string struct_name, string id){
 	return ((*table)[id]->type);
 }
 
-int findStruct(string struct_name){
+// TYPE LOOKUPS - All kinds of types <struct, union etc.>
 
+int typeLookup(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
 
 	while(temp){
@@ -189,11 +192,16 @@ int findStruct(string struct_name){
 		temp = struct_parent_table[temp];
 	}
 	return 0;
-
-	//return (struct_sym_table.find(struct_name)!=struct_sym_table.end());
 }
 
-int lookupStruct(string struct_name, string id){
+int currTypeLookup(string struct_name){
+	struct_sym_table* temp = curr_struct_table;
+	if((*temp).find(struct_name)!=(*temp).end()) return 1;
+	
+	return 0;
+}
+
+int findTypeAttr(string struct_name, string id){
 
 	struct_sym_table* temp = curr_struct_table;
 
@@ -204,26 +212,10 @@ int lookupStruct(string struct_name, string id){
 		}
 		temp = struct_parent_table[temp];
 	}
-	return -1;// struct table not found
-
-	// if(struct_sym_table.find(struct_name)!=struct_sym_table.end()){
-	// 	if((*struct_sym_table[struct_name]).find(id)!=(*struct_sym_table[struct_name]).end()) return 1;
-	// 	else return 0; // struct doesnt contain attr id
-	// }
+	return -1;	// struct table not found
 	
 }
 
-ull getStructsize(string struct_name){
-	struct_sym_table* temp = curr_struct_table;
-
-	while(temp){
-		if((*temp).find(struct_name)!=(*temp).end()){
-			return (*temp)[struct_name].first;
-		}
-		temp = struct_parent_table[temp];
-	}
-	return 0;
-}
 
 void createParamList(){
 	Loffset.push(Goffset.top());
@@ -291,6 +283,8 @@ void printFuncArg(){
      }
      fclose(file);
 }
+
+
 void printSymbolTable(sym_table* table, string file_name){
 	FILE* file = fopen(file_name.c_str(), "w");
   	fprintf( file,"Name, Type, Size, isInitialized, Offset\n");
@@ -301,8 +295,21 @@ void printSymbolTable(sym_table* table, string file_name){
   fclose(file);
 }
 
+
+ull getStructsize(string struct_name){
+	struct_sym_table* temp = curr_struct_table;
+
+	while(temp){
+		if((*temp).find(struct_name)!=(*temp).end()){
+			return (*temp)[struct_name].first;
+		}
+		temp = struct_parent_table[temp];
+	}
+	return 0;
+}
+
 ull getSize(string id){
-  if(struct_size.find(id)!=struct_size.end()) return getStructsize(id);
+  if(typeLookup(id)) return getStructsize(id);
   if(id == "char") return sizeof(char);
   if(id == "short") return sizeof(short);
   if(id == "short int") return sizeof(short int);
@@ -327,3 +334,5 @@ ull getSize(string id){
 
   return 8; // for any ptr
 }
+
+

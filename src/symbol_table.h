@@ -23,7 +23,7 @@ extern struct_sym_table struct_gst;
 extern map<sym_table*, sym_table*> parent_table;
 extern map<struct_sym_table*, struct_sym_table*> struct_parent_table;
 
-extern map<string, ull> struct_size;
+// extern map<string, ull> struct_size;
 extern map<string, vector<string> > func_arg;
 extern ull struct_offset;
 extern sym_table* curr_table; //store pointer of the current symbol table
@@ -52,8 +52,9 @@ void createStructTable();
 int insertStructAttr(string attr, string type, ull size, bool init);
 int printStructTable(string struct_name);
 string StructAttrType(string struct_name, string id);
-int findStruct(string struct_name);
-int lookupStruct(string struct_name, string id);
+int typeLookup(string struct_name);
+int currTypeLookup(string struct_name);
+int findTypeAttr(string , string );
 void createParamList();
 void insertSymbol(sym_table& table, string id, string type, ull size, bool is_init, sym_table* ptr);
 vector<string> getFuncArgs(string id);

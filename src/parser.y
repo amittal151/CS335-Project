@@ -33,6 +33,8 @@ vector<string> currArgs;
 extern int yylex();
 extern int yyrestart(FILE*);
 extern FILE* yyin;
+extern char* last;
+extern int yylineno;
 #define YYERROR_VERBOSE
 %}
 
@@ -43,6 +45,8 @@ extern FILE* yyin;
 	int ind;
 }
 
+// %define parse.error detailed
+%token-table 
 %token<str> IDENTIFIER STRING_LITERAL SIZEOF
 %token<str> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token<str> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
@@ -54,13 +58,12 @@ extern FILE* yyin;
 %token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token<str> STRUCT UNION ENUM ELLIPSIS
 %token<str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
-%type<str> F G
-%type<str> CHANGE_TABLE 
-%type<ind> NEXT_QUAD WRITE_GOTO
 
 %start translation_unit
 
-
+%type<str> F G 
+%type<str> CHANGE_TABLE 
+%type<ind> NEXT_QUAD WRITE_GOTO
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
 %type<str> assignment_operator 
 %type<ptr> and_expression exclusive_or_expression inclusive_or_expression logical_and_expression logical_or_expression conditional_expression 
@@ -68,7 +71,8 @@ extern FILE* yyin;
 %type<ptr> declarator direct_declarator pointer type_qualifier_list parameter_type_list parameter_list parameter_declaration identifier_list type_name abstract_declarator direct_abstract_declarator initializer
 %type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
-%type<ptr> storage_class_specifier GOTO_AND GOTO_COND GOTO_OR CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE  N
+%type<ptr> storage_class_specifier GOTO_AND GOTO_COND GOTO_OR CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> N S
 %type<str> struct_or_union
 
 %left ';'
@@ -262,7 +266,7 @@ postfix_expression
 
 		//Semantics
 		string temp = string($3);
-		int ret = lookupStruct($1->type,temp);
+		int ret = findTypeAttr($1->type,temp);
 		if(ret == -1){
 			yyerror(("Struct " + $1->node_name + " not defined").c_str());
 		}
@@ -288,7 +292,7 @@ postfix_expression
 		}
 		else temp1.pop_back();
 
-		int ret = lookupStruct(temp1, temp);
+		int ret = findTypeAttr(temp1, temp);
 		if(ret ==-1){
 			yyerror("Struct not defined");
 		}
@@ -556,6 +560,7 @@ cast_expression
 
 		//Semantic
 		$$->type = $2->type;
+		cout<<$2->type<<endl;
 		$$->isInit = $4->isInit;
 
 		//--3AC
@@ -1337,7 +1342,7 @@ assignment_expression
 		}
 		else{
 			//TODO
-			yyerror(("Incompatible types when assigning type " + $1->type + " to " + $3->type).c_str());
+			yyerror(("Incompatible types when assigning " + $3->type + " type to " + $1->type).c_str());
 		}
 		if($1->expType == 3 && $3->isInit){
 			updInit($1->temp_name);
@@ -1382,8 +1387,8 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'						{$$ = $1;  type = "";}
-	| declaration_specifiers init_declarator_list ';'	{
+	: declaration_specifiers ';'						{ $$ = $1;  type = "";}
+	| declaration_specifiers init_declarator_list ';'	{	
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $2, "", 1);
@@ -1403,6 +1408,7 @@ declaration
 															$$->nextlist = $2->nextlist;
 															
 														}
+	// | error ';' {  ; cout<<"uff\n"; $$ = new treeNode; }
 	;
 
 
@@ -1415,7 +1421,7 @@ declaration_specifiers
 															$$ = makenode("declaration_specifiers",attr);
 														}
 	| type_specifier									{ $$ = $1; }
-	| type_specifier declaration_specifiers				{
+	| type_specifier declaration_specifiers				{	
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $2, "", 1);
@@ -1431,8 +1437,9 @@ declaration_specifiers
 	;
 
 init_declarator_list
-	: init_declarator									{$$ = $1;}
-	| init_declarator_list ',' NEXT_QUAD init_declarator			{
+	: init_declarator									{ $$ = $1;}
+	| init_declarator_list ',' NEXT_QUAD init_declarator 
+														{
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $4, "", 1);
@@ -1480,7 +1487,6 @@ init_declarator
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 		}
 		// string a = checkType($1->type, $4->type);
-		// cout<<a<<" "<<$1->type<<" "<<$4->type<<"\n";
 		if(!isVoid($1->type)){
 			
 			$1->place = qid($1->temp_name, lookup($1->temp_name));
@@ -1522,6 +1528,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}	
 	| CHAR		{
 		$$ = makeleaf($1);
@@ -1529,19 +1536,23 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}	
 	| SHORT		{
 		$$ = makeleaf($1);
 		
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);	}	
+		else type += " " + string($1);	
+		$$->type = $1;
+	}	
 	| INT			{
 		$$ = makeleaf($1);
 
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| LONG			{
 		$$ = makeleaf($1);
@@ -1549,6 +1560,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| FLOAT			{
 		$$ = makeleaf($1);
@@ -1556,6 +1568,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| DOUBLE		{
 		$$ = makeleaf($1);
@@ -1563,6 +1576,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| SIGNED		{
 		$$ = makeleaf($1);
@@ -1570,6 +1584,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| UNSIGNED		{
 		$$ = makeleaf($1);
@@ -1577,6 +1592,7 @@ type_specifier
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);
+		$$->type = $1;
 	}
 	| struct_or_union_specifier	{
 		$$ = $1;
@@ -1598,17 +1614,24 @@ struct_or_union_specifier
 		insertAttr(v, makeleaf($2), "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = makenode($1, v);
-
+ 
 		// Semantics
-		if(printStructTable("STRUCT_" + string($2)) == 1){
-			if(type == "")type = "STRUCT_" + string($2);
-			else type += " STRUCT_" + string($2);
+		if(!$3->is_error && !$5->is_error) {
+			if(!currTypeLookup("struct_" + string($2)) && !currTypeLookup("union_" + string($2)) ){
+				printStructTable(string($1) + "_" + string($2));
+				type = string($1) + "_" + string($2);
+				$$->type = type;
+			}
+			else {
+				yyerror(("redefinition of " + string($2)).c_str());
+				$$->is_error = 1;
+			}
 		}
-		else {
-			yyerror(("Struct " + string($2) + " is already defined").c_str());
+		else{
+			$$->is_error = 1;
 		}
-		
 	}
+
 	| struct_or_union S '{' struct_declaration_list '}'		{
 		vector<data> v;
 		insertAttr(v, $4, "", 1);
@@ -1616,13 +1639,20 @@ struct_or_union_specifier
 
 		// Semantics
 		Anon_StructCounter++;
-		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter))  == 1){
-			if(type == "")type = "STRUCT_" + to_string(Anon_StructCounter);
-			else type += " STRUCT_" + to_string(Anon_StructCounter);
+		if(!$2->is_error && !$4->is_error){
+			if(!currTypeLookup("struct_" + to_string(Anon_StructCounter)) && !currTypeLookup("union_" + to_string(Anon_StructCounter)) ){
+				printStructTable(string($1) + "_" + to_string(Anon_StructCounter));
+				type = string($1) + "_" + to_string(Anon_StructCounter);
+				$$->type = type;
+			}
+			else {
+				// Wont come here
+				yyerror(("redefinition of " + to_string(Anon_StructCounter)).c_str());
+				$$->is_error = 1;
+			}
 		}
 		else {
-			// Wont come here
-			yyerror(("Struct is already defined"));
+			$$->is_error = 1;
 		}
 	}
 	| struct_or_union IDENTIFIER {
@@ -1631,17 +1661,24 @@ struct_or_union_specifier
 		$$ = makenode($1, v);
 
 		// Semantics
-		// ToDo : Global Lookup
-		if(findStruct("STRUCT_" + string($2)) == 1){
-			if(type == "")type = "STRUCT_" + string($2);
-			else type += " STRUCT_" + string($2);
+
+		if(typeLookup(string($1) + "_" + string($2))){
+			if(type == ""){
+				type = string($1) + "_" + string($2);
+				$$->type = type;
+			}
+			else {
+				yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else if(structName == string($2)){
 			// We are inside a struct
 			type = "#INSIDE";
 		}
 		else {
-			yyerror(("Struct " + string($2) + " is not defined").c_str());
+			yyerror(( string($1) + " " + string($2) + " is not defined").c_str());
+			$$->is_error = 1;
 		}
 
 	}
@@ -1656,8 +1693,13 @@ G
 
 S 
 	: %empty {
+		$$ = new treeNode;
 		createStructTable();
-		
+
+		if(type != "") {
+			yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
+			$$->is_error = 1;
+		}
 	}
 
 struct_or_union
@@ -1692,6 +1734,8 @@ specifier_qualifier_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("specifier_qualifier_list", v);
+
+		$$->type = $1->type + $2->type;
 	}
 	| type_specifier	{ $$ = $1; }
 	| type_qualifier specifier_qualifier_list 	{
@@ -2180,6 +2224,8 @@ type_name
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
 		$$ = makenode("type_name",v);
+
+		$$->type = $1->type;
 	}
 	;
 
@@ -2284,6 +2330,7 @@ statement
 	| selection_statement	{$$ = $1;}
 	| iteration_statement	{$$ = $1;}
 	| jump_statement		{$$ = $1;}
+	| error ';' 			{$$ = new treeNode; yyclearin; yyerrok;}
 	;
 
 labeled_statement
@@ -2396,6 +2443,7 @@ compound_statement
         $$->continuelist = $5->continuelist;
         $$->breaklist = $5->breaklist;
 	}
+	// | '{' error '}'  { yyerror("syntax error, expected '}' for previously seen '{' "); cout<<"unseen {\n"; $$ = new treeNode;    }
 	;
 
 CHANGE_TABLE
@@ -2421,7 +2469,7 @@ declaration_list
 
         backpatch($1->nextlist, $2);
         $$->nextlist = $3->nextlist;
-	}
+	}	
 	;
 
 statement_list
@@ -2780,6 +2828,50 @@ void no_file_present(){
 }
 
 
+int yyerror(const char* s) { 
+	
+	FILE *dupfile = fopen(curr_file, "r");
+	int count = 1;
+
+	char currline[256]; /* or other suitable maximum line size */
+	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
+		if (count == line){
+			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
+			print_error();
+			cout<<s<<"\n\n";
+			cout<<"\033[1;34m Compilation terminated...exiting\033[0m"<<endl;
+			// exit(0);
+			return -1;
+		}
+		else{
+			count++;
+		}
+	}
+
+	fclose(dupfile);
+	return -1;
+}
+
+int warning(const char* s) { 
+	FILE *dupfile = fopen(curr_file, "r");
+	int count = 1;
+
+	char currline[256]; /* or other suitable maximum line size */
+	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
+		if (count == line){
+			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
+			print_warning();
+			cout<<s<<"\n\n";
+			return -1;
+		}
+		else{
+			count++;
+		}
+	}
+
+	fclose(dupfile);
+	return 1;
+}
 
 int main(int argc, char* argv[]){
 	
@@ -2898,6 +2990,10 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
+		// if(last[0] != ';' && last[0] != '}' ){
+		// 	print_error();
+		// 	cout<<" syntax error, expected ';' or '}' at end of file\n";  
+		// }
 		
 	}
 
@@ -2907,47 +3003,7 @@ int main(int argc, char* argv[]){
 	return 0;
 }
 
-int yyerror(const char* s) { 
-	FILE *dupfile = fopen(curr_file, "r");
-	int count = 1;
 
-	char currline[256]; /* or other suitable maximum line size */
-	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
-		if (count == line){
-			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
-			print_error();
-			cout<<s<<"\n\n";
-			cout<<"\033[1;34m Compilation terminated...exiting\033[0m"<<endl;
-			exit(0);
-			// return -1;
-		}
-		else{
-			count++;
-		}
-	}
 
-	fclose(dupfile);
-	return 1;
-}
 
-int warning(const char* s) { 
-	FILE *dupfile = fopen(curr_file, "r");
-	int count = 1;
-
-	char currline[256]; /* or other suitable maximum line size */
-	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
-		if (count == line){
-			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
-			print_warning();
-			cout<<s<<"\n\n";
-			return -1;
-		}
-		else{
-			count++;
-		}
-	}
-
-	fclose(dupfile);
-	return 1;
-}
 
