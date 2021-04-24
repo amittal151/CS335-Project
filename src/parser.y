@@ -29,6 +29,9 @@ vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
+map<string, vector<int>> gotolablelist;
+map<string, int> gotolabel;
+
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -2680,6 +2683,14 @@ labeled_statement
 			$$->is_error = 1;
 		}
 
+		if(gotolabel.find($1) != gotolabel.end()){
+			yyerror(("duplicate label \'" + string($1) + "\'").c_str());
+			$$->is_error = 1;
+		}
+		else{
+			gotolabel.insert({string($1), $3});
+		}
+
 		// ??? check if already labelled using same label (else throw error)
 		$$->nextlist = $4->nextlist;
 		$$->caselist = $4->caselist;
@@ -3049,6 +3060,7 @@ jump_statement
         int a = code.size();
         emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         // store a somewhere and backpatch a with the goto address later (idk how) and error handling
+        gotolablelist[$2].push_back(a);
     }
 	| CONTINUE ';'	{
         $$ = makeleaf($1);
@@ -3139,9 +3151,8 @@ function_definition
 			string fName = $3->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName);
+			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
-
-        // 3AC not done
 	}
 
 	| declaration_specifiers declarator F compound_statement 	{
@@ -3166,6 +3177,7 @@ function_definition
 			string fName = $3->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName);
+			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
         // 3AC not done
@@ -3192,6 +3204,7 @@ function_definition
 			string fName = $2->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName);
+			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
         // 3AC not done
@@ -3216,6 +3229,7 @@ function_definition
 			string fName = $2->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName);
+			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
         // 3AC not done
@@ -3426,13 +3440,22 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
-		print3AC_code();
+		
 		// if(last[0] != ';' && last[0] != '}' ){
 		// 	print_error();
 		// 	cout<<" syntax error, expected ';' or '}' at end of file\n";  
 		// }
 		
 	}
+
+	for(auto i: gotolablelist){
+		if(gotolabel.find(i.first) == gotolabel.end()){
+			yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+		}
+		else backpatch(i.second, gotolabel[i.first]);
+	}
+
+	print3AC_code();
 
 	endAST();
 

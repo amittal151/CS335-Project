@@ -6,4 +6,6 @@ parser.*pp
 /bin/*
 .vscode
 *.csv
-*.out
+*.out*
+*.txt
+
