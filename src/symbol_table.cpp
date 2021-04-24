@@ -77,7 +77,9 @@ void makeSymbolTable(string name, string f_type){
 	}
 }
 
+
 void removeFuncProto(){
+	// Removes the Temporary function Created in the Scope
 	avl = 0;
 	updSymbolTable("dummyF_name");
 	parent_table.erase((*curr_table)["dummyF_name"]->entry);

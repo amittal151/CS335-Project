@@ -35,6 +35,7 @@ extern int yyrestart(FILE*);
 extern FILE* yyin;
 extern char* last;
 extern int yylineno;
+extern void print3AC_code();
 #define YYERROR_VERBOSE
 %}
 
@@ -61,7 +62,7 @@ extern int yylineno;
 
 %start translation_unit
 
-%type<str> F G 
+%type<str> G 
 %type<str> CHANGE_TABLE 
 %type<ind> NEXT_QUAD WRITE_GOTO
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
@@ -72,10 +73,12 @@ extern int yylineno;
 %type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
 %type<ptr> storage_class_specifier GOTO_AND GOTO_COND GOTO_OR CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
-%type<ptr> N S
+%type<ptr> N S F
 %type<str> struct_or_union
 
-%left ';'
+%left '+' '-' '*' '/' '%' ">>" "<<" "++" "--" "==" "!=" 
+%left '&' '|' '^' "&&" "||" ',' ';' 
+%right '=' "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|="
 
 %%
 primary_expression
@@ -86,6 +89,7 @@ primary_expression
 		string temp = primaryExpression(string($1));
 		if(temp == ""){
 			yyerror(("Undeclared Identifier " + string($1)).c_str());
+			$$->is_error = 1;
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -151,22 +155,27 @@ postfix_expression
 			$$->isInit = 1;
 		}
 		string temp = postfixExpression($1->type,1);
-		if(!temp.empty()){	
-			$$->type = temp;
+		if(!($1->is_error || $3->is_error)){
+			if(!temp.empty()){	
+				$$->type = temp;
 
-			//--3AC
-			$$->place = newtemp(temp);
-			if($3->place.second) $$->place.second->offset = $1->place.second->offset;
-			if($3->place.second) $$->place.second->size = $3->place.second->offset;
-			
-			//TODO (is_init);
+				//--3AC
+				$$->place = newtemp(temp);
+				if($3->place.second) $$->place.second->offset = $1->place.second->offset;
+				if($3->place.second) $$->place.second->size = $3->place.second->offset;
+				
+				//TODO (is_init);
 
-			$$->nextlist.clear();
+				$$->nextlist.clear();
 
-
+			}
+			else{
+				yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str());
+				$$->is_error=1;
+			}
 		}
 		else{
-			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str());
+			$$->is_error=1;
 		}
 	}
 	| postfix_expression '(' ')' {
@@ -175,29 +184,35 @@ postfix_expression
 		//Semantics
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type,2);
-		if(!temp.empty()){	
-			$$->type = temp;
-			if($1->expType == 3){
-				vector<string> funcArg = getFuncArgs($1->temp_name);
-				if(!funcArg.empty()){
-					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
+		if(!($1->is_error)){
+			if(!temp.empty()){	
+				$$->type = temp;
+				if($1->expType == 3){
+					vector<string> funcArg = getFuncArgs($1->temp_name);
+					if(!funcArg.empty()){
+						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
+					}
+					else{
+
+					//--3AC
+
+						qid q = newtemp(temp);
+						$$->nextlist.clear();
+
+						emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+						emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
+						
+						$$->place = q;
+					}
 				}
-				else{
-
-				//--3AC
-
-				qid q = newtemp(temp);
-				$$->nextlist.clear();
-				$$->place = q;
-
-				emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
-				emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
-
-				}
+			}
+			else{
+				yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str());
+				$$->is_error=1;
 			}
 		}
 		else{
-			yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str());
+			$$->is_error=1;
 		}
 		currArgs.clear(); 
 	}
@@ -211,50 +226,56 @@ postfix_expression
 		$$->isInit = $3->isInit;
 		string temp = postfixExpression($1->type,3);
 
-		if(!temp.empty()){	
-			$$->type = temp;
-			if($1->expType ==3){
-				vector<string> funcArgs = getFuncArgs($1->temp_name);
+		if(!($1->is_error || $3->is_error)){
+			if(!temp.empty()){	
+				$$->type = temp;
+				if($1->expType ==3){
+					vector<string> funcArgs = getFuncArgs($1->temp_name);
 
-				for(int i=0;i<funcArgs.size();i++){
-					if(funcArgs[i]=="...")break;
-					if(currArgs.size()==i){
-						
-						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
-						break;
-					}
-					string msg = checkType(funcArgs[i],currArgs[i]);
+					for(int i=0;i<funcArgs.size();i++){
+						if(funcArgs[i]=="...")break;
+						if(currArgs.size()==i){
+							
+							yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
+							break;
+						}
+						string msg = checkType(funcArgs[i],currArgs[i]);
 
-					if(msg =="warning"){
-						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
-					}
-					else if(msg.empty()){
-						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
-						break;
-					}
-					if(i==funcArgs.size()-1 && i<currArgs.size()-1){
-						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str());
-						break;
-					}
+						if(msg =="warning"){
+							warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
+						}
+						else if(msg.empty()){
+							yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
+							break;
+						}
+						if(i==funcArgs.size()-1 && i<currArgs.size()-1){
+							yyerror(("Too many Arguments to Function " + $1->temp_name).c_str());
+							break;
+						}
 
-				}	
+					}	
 
 
-				//--3AC
+					//--3AC
 
-				qid q = newtemp($$->type);
-				$$->place = q;
-				$$->nextlist.clear();
+					qid q = newtemp($$->type);
+					$$->place = q;
+					$$->nextlist.clear();
 
-				emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
-				emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.size()), NULL), q, -1);
+					emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+					emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.size()), NULL), q, -1);
 
-				//DOUBT size() or size()+1?
+					//DOUBT size() or size()+1?
 
+				}
+			}
+			else{
+				yyerror("Invalid function call");
+				$$->is_error=1;
 			}
 		}
 		else{
-			yyerror("Invalid function call");
+			$$->is_error=1;
 		}
 		currArgs.clear(); 
 	}
@@ -265,17 +286,25 @@ postfix_expression
 		$$ = makenode("expression.id", attr);
 
 		//Semantics
-		string temp = string($3);
-		int ret = findTypeAttr($1->type,temp);
-		if(ret == -1){
-			yyerror(("Struct " + $1->node_name + " not defined").c_str());
-		}
-		else if (ret == 0){
-			yyerror(("Struct " + $1->type.substr(7, $1->type.length()-7) + " has no member " + string($3)).c_str());
+
+		if(!$1->is_error){
+			string temp = string($3);
+			int ret = findTypeAttr($1->type,temp);
+			if(ret == -1){
+				yyerror(("Struct " + $1->node_name + " not defined").c_str());
+				$$->is_error = 1;
+			}
+			else if (ret == 0){
+				yyerror(("Struct " + $1->type.substr(7, $1->type.length()-7) + " has no member " + string($3)).c_str());
+				$$->is_error = 1;
+			}
+			else{
+				$$->type = StructAttrType($1->type,temp);
+				$$->temp_name = $1->temp_name + "." + temp;
+			}
 		}
 		else{
-			$$->type = StructAttrType($1->type,temp);
-			$$->temp_name = $1->temp_name + "." + temp;
+			$$->is_error = 1;
 		}
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
@@ -285,23 +314,33 @@ postfix_expression
 		$$ = makenode($2, attr);
 
 		//Semantics
-		string temp = string($3);
-		string temp1 = ($1->type);
-		if(temp1.back() != '*'){
-			yyerror(( $1->node_name + " is not a pointer, did you mean to use '.' ").c_str());
-		}
-		else temp1.pop_back();
+		if(!$1->is_error){
+			string temp = string($3);
+			string temp1 = ($1->type);
+			if(temp1.back() != '*'){
+				yyerror(( $1->node_name + " is not a pointer, did you mean to use '.' ").c_str());
+				$$->is_error=1;
+			}
+			else{
 
-		int ret = findTypeAttr(temp1, temp);
-		if(ret ==-1){
-			yyerror("Struct not defined");
-		}
-		else if (ret == 0){
-			yyerror("Attribute of Struct not defined");
+				temp1.pop_back();
+				int ret = findTypeAttr(temp1, temp);
+				if(ret ==-1){
+					yyerror("Struct not defined");
+					$$->is_error=1;
+				}
+				else if (ret == 0){
+					yyerror("Attribute of Struct not defined");
+					$$->is_error=1;
+				}
+				else{
+					$$->type = StructAttrType(temp1, temp);
+					$$->temp_name = $1->temp_name + "->" + temp;
+				}
+			}
 		}
 		else{
-			$$->type = StructAttrType(temp1, temp);
-			$$->temp_name = $1->temp_name + "->" + temp;
+			$$->is_error=1;
 		}
 
 	}
@@ -312,21 +351,28 @@ postfix_expression
 
 		//Semantics
 		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type,6);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $1->intVal + 1;
+		if(!$1->is_error){
+			string temp = postfixExpression($1->type,6);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $1->intVal + 1;
 
 
-			//--3AC
+				//--3AC
 
-			qid q = newtemp(temp);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit(qid("++S", lookup("++")), $1->place, qid("", NULL), q, -1);
+				qid q = newtemp(temp);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit(qid("++S", lookup("++")), $1->place, qid("", NULL), q, -1);
+				// emit(qid("=", lookup("=")), q, qid("", NULL), $1->place, -1);
+			}
+			else{
+				yyerror("Increment not defined for this type");
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror("Increment not defined for this type");
+			$$->is_error = 1;
 		}
 
 	}
@@ -336,23 +382,29 @@ postfix_expression
 		$$ = makenode($2, attr);
 
 		//Semantics
-		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type,7);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $1->intVal - 1;
+		if(!$1->is_error){
+			$$->isInit = $1->isInit;
+			string temp = postfixExpression($1->type,7);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $1->intVal - 1;
 
 
-			//--3AC
+				//--3AC
 
-			qid q = newtemp(temp);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit(qid("--S", lookup("--")), $1->place, qid("", NULL), q, -1);
+				qid q = newtemp(temp);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit(qid("--S", lookup("--")), $1->place, qid("", NULL), q, -1);
 
+			}
+			else{
+				yyerror("Decrement not defined for this type");
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror("Decrement not defined for this type");
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -362,17 +414,21 @@ argument_expression_list
 	: assignment_expression {
 		$$ = $1;
 
-		//Semantic
-		$$->isInit = $1->isInit;
-		currArgs.push_back($1->type);
-		$$->type = "void";
+		if(!$1->is_error){
+			//Semantic
+			$$->isInit = $1->isInit;
+			currArgs.push_back($1->type);
+			$$->type = "void";
 
-		//--3AC
-		$$->nextlist.clear();
-		int _idx = -1;
-		if($$->type == "char*" && $$->place.second == NULL) _idx = -4;
-		emit(qid("param", NULL), $$->place, qid("", NULL), qid("", NULL), _idx);
-
+			//--3AC
+			$$->nextlist.clear();
+			int _idx = -1;
+			if($$->type == "char*" && $$->place.second == NULL) _idx = -4;
+			emit(qid("param", NULL), $$->place, qid("", NULL), qid("", NULL), _idx);
+		}
+		else{
+			$$->is_error = 1;
+		}
 	}
 	| argument_expression_list ',' assignment_expression {
 		vector<data> attr;
@@ -381,17 +437,22 @@ argument_expression_list
 		$$ = makenode("argument_list", attr);
 
 		//Semantic
-		string temp = argExp($1->type, $3->type, 2);
+		if(!($1->is_error || $3->is_error)){
+			string temp = argExp($1->type, $3->type, 2);
 
-		if($1->isInit && $3->isInit) $$->isInit=1;
-		currArgs.push_back($3->type);
-		$$->type = "void";
+			if($1->isInit && $3->isInit) $$->isInit=1;
+			currArgs.push_back($3->type);
+			$$->type = "void";
 
-		//--3AC
-		$$->nextlist.clear();
-		int _idx = -1;
-		if($3->type == "char*" && $3->place.second == NULL) _idx = -4;
-		emit(qid("param", NULL), $3->place, qid("", NULL), qid("", NULL), _idx);
+			//--3AC
+			$$->nextlist.clear();
+			int _idx = -1;
+			if($3->type == "char*" && $3->place.second == NULL) _idx = -4;
+			emit(qid("param", NULL), $3->place, qid("", NULL), qid("", NULL), _idx);
+		}
+		else{
+			$$->is_error = 1;
+		}
 	}
 	;
 
@@ -406,22 +467,28 @@ unary_expression
 		$$ = makenode($1,attr);
 
 		//Semantic
-		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type,6);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal +1;
+		if(!$2->is_error){
+			$$->isInit = $2->isInit;
+			string temp = postfixExpression($2->type,6);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $2->intVal +1;
 
-			//--3AC
-			qid q = newtemp(temp);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit(qid("++P", lookup("++")), $2->place, qid("", NULL), q, -1);
+				//--3AC
+				qid q = newtemp(temp);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit(qid("++P", lookup("++")), $2->place, qid("", NULL), q, -1);
 
+			}
+			else{
+				//TODO
+				yyerror("Increment not defined for this type");
+				$$->is_error = 1;
+			}
 		}
 		else{
-			//TODO
-			yyerror("Increment not defined for this type");
+			$$->is_error = 1;
 		}
 	}
 	| DEC_OP unary_expression {
@@ -430,22 +497,27 @@ unary_expression
 		$$ = makenode($1,attr);
 
 		//Semantic
-		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type,7);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal -1;
+		if(!$2->is_error){
+			$$->isInit = $2->isInit;
+			string temp = postfixExpression($2->type,7);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $2->intVal -1;
 
-			//--3AC
-			qid q = newtemp(temp);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit(qid("--P", lookup("--")), $2->place, qid("", NULL), q, -1);
+				//--3AC
+				qid q = newtemp(temp);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit(qid("--P", lookup("--")), $2->place, qid("", NULL), q, -1);
 
+			}
+			else{
+				//TODO
+				yyerror("Decrement not defined for this type");
+			}
 		}
 		else{
-			//TODO
-			yyerror("Decrement not defined for this type");
+			$$->is_error = 1;
 		}
 	}
 	| unary_operator cast_expression {
@@ -455,22 +527,28 @@ unary_expression
 		$$ = makenode("unary_exp",attr);
 
 		//Semantic
-		$$->isInit = $2->isInit;
-		string temp = unaryExp($1->node_name,$2->type);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal;
+		if(!($1->is_error || $2->is_error)){
+			$$->isInit = $2->isInit;
+			string temp = unaryExp($1->node_name,$2->type);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $2->intVal;
 
-			//--3AC
-			qid q = newtemp(temp);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit($1->place, $2->place, qid("", NULL), q, -1);
+				//--3AC
+				qid q = newtemp(temp);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit($1->place, $2->place, qid("", NULL), q, -1);
 
+			}
+			else{
+				//TODO
+				yyerror("Type inconsistent with operator");
+				$$->is_error = 1;
+			}
 		}
 		else{
-			//TODO
-			yyerror("Type inconsistent with operator");
+			$$->is_error = 1;
 		}
 	}
 	| SIZEOF unary_expression {
@@ -478,16 +556,21 @@ unary_expression
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
 
-		//Semantic
-		$$->type = "int";
-		$$->isInit =1;
-		$$->intVal = $2->size;
+		if(!$2->is_error){
+			//Semantic
+			$$->type = "int";
+			$$->isInit =1;
+			$$->intVal = $2->size;
 
-		//--3AC
-		qid q = newtemp("int");
-		$$->place = q;
-		$$->nextlist.clear();
-		emit(qid("SIZEOF", lookup("sizeof")), $2->place, qid("", NULL), q, -1);
+			//--3AC
+			qid q = newtemp("int");
+			$$->place = q;
+			$$->nextlist.clear();
+			emit(qid("SIZEOF", lookup("sizeof")), $2->place, qid("", NULL), q, -1);
+		}
+		else{
+			$$->is_error = 1;
+		}
 
 	}
 	| SIZEOF '(' type_name ')' {
@@ -495,16 +578,21 @@ unary_expression
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
 
-		//Semantic
-		$$->type = "int";
-		$$->isInit =1;
-		$$->intVal = $3->size;
+		if(!$3->is_error){
+			//Semantic
+			$$->type = "int";
+			$$->isInit =1;
+			$$->intVal = $3->size;
 
-		//--3AC
-		qid q = newtemp("int");
-		$$->place = q;
-		$$->nextlist.clear();
-		emit(qid("SIZEOF", lookup("sizeof")), $3->place, qid("", NULL), q, -1);
+			//--3AC
+			qid q = newtemp("int");
+			$$->place = q;
+			$$->nextlist.clear();
+			emit(qid("SIZEOF", lookup("sizeof")), $3->place, qid("", NULL), q, -1);
+		}
+		else{
+			$$->is_error = 1;
+		}
 	}
 	;
 
@@ -558,16 +646,20 @@ cast_expression
 		insertAttr(attr, $4, "", 1);
 		$$ = makenode("cast_expression" ,attr);
 
-		//Semantic
-		$$->type = $2->type;
-		cout<<$2->type<<endl;
-		$$->isInit = $4->isInit;
+		if(!($2->is_error || $4->is_error)){
+			//Semantic
+			$$->type = $2->type;
+			$$->isInit = $4->isInit;
 
-		//--3AC
-		qid q = newtemp($$->type);
-		$$->place = q;
-		$4->nextlist.clear();
-		emit(qid($4->type+"to"+$$->type, NULL), $4->place, qid("", NULL), q, -1);
+			//--3AC
+			qid q = newtemp($$->type);
+			$$->place = q;
+			$4->nextlist.clear();
+			emit(qid($4->type+"to"+$$->type, NULL), $4->place, qid("", NULL), q, -1);
+		}
+		else{
+			$$->is_error = 1;
+		}
 
 
 	}
@@ -583,55 +675,62 @@ multiplicative_expression
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("*" ,attr);
 
-		//Semantic
-		$$->intVal = $1->intVal * $3->intVal; 
 
-		//TODO for real
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		string temp = mulExp($1->type, $3->type, '*');
+		if(!($1->is_error || $3->is_error)){
 
-		if(!temp.empty()){
-			if(temp == "int"){
-				$$->type = "long long" ;
+			//Semantic
+			$$->intVal = $1->intVal * $3->intVal; 
 
-				//--3AC
-				qid q = newtemp("long long");
-				$$->place = q;
-				$$->nextlist.clear();
-				emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
+			//TODO for real
+			if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
+			string temp = mulExp($1->type, $3->type, '*');
+
+			if(!temp.empty()){
+				if(temp == "int"){
+					$$->type = "long long" ;
+
+					//--3AC
+					qid q = newtemp("long long");
+					$$->place = q;
+					$$->nextlist.clear();
+					emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
+				}
+				else if(temp == "float"){
+					$$->type = "long double";
+
+					//--3AC
+
+					qid q = newtemp("long double");
+					$$->place = q;
+					$$->nextlist.clear();
+
+					if(isInt($1->type)){
+						qid q1 = newtemp($$->type);
+						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
+
+						emit(qid("*real", lookup("*")), q1, $3->place, q, -1);
+					}
+					else if(isInt($3->type)){
+						qid q1 = newtemp($$->type);
+						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+
+						emit(qid("*real", lookup("*")), $1->place, q1, q, -1);
+					}
+					else{
+						emit(qid("*real", lookup("*")), $1->place, $3->place, q, -1);
+					}
+
+				}
+
 			}
-			else if(temp == "float"){
-				$$->type = "long double";
-
-				//--3AC
-
-				qid q = newtemp("long double");
-				$$->place = q;
-				$$->nextlist.clear();
-
-				if(isInt($1->type)){
-					qid q1 = newtemp($$->type);
-					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
-
-					emit(qid("*real", lookup("*")), q1, $3->place, q, -1);
-				}
-				else if(isInt($3->type)){
-					qid q1 = newtemp($$->type);
-					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
-
-					emit(qid("*real", lookup("*")), $1->place, q1, q, -1);
-				}
-				else{
-					emit(qid("*real", lookup("*")), $1->place, $3->place, q, -1);
-				}
-
+			else{
+				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for * operator").c_str());
+				$$->is_error = 1;
 			}
-
 		}
 		else{
-			yyerror("Incompatible type for * operator");
+			$$->is_error = 1;
 		}
-
 
 	}
 	| multiplicative_expression '/' cast_expression {
@@ -640,49 +739,57 @@ multiplicative_expression
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("/" ,attr);
 
-		//Semantic
-		if($3->intVal!=0)$$->intVal = $1->intVal / $3->intVal;
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		string temp =mulExp($1->type,$3->type,'/');
-		if(!temp.empty()){
-			if(temp == "int"){
-				$$->type = "long long" ;
 
-				//--3AC
-				qid q = newtemp("long long");
-				$$->place = q;
-				$$->nextlist.clear();
-				emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
+
+		if(!($1->is_error || $3->is_error)){
+			//Semantic
+			if($3->intVal!=0)$$->intVal = $1->intVal / $3->intVal;
+			if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
+			string temp =mulExp($1->type,$3->type,'/');
+			if(!temp.empty()){
+				if(temp == "int"){
+					$$->type = "long long" ;
+
+					//--3AC
+					qid q = newtemp("long long");
+					$$->place = q;
+					$$->nextlist.clear();
+					emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
+				}
+				else if(temp == "float"){
+					$$->type = "long double";
+
+					//--3AC
+
+					qid q = newtemp("long double");
+					$$->place = q;
+					$$->nextlist.clear();
+
+					if(isInt($1->type)){
+						qid q1 = newtemp($$->type);
+						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
+
+						emit(qid("/real", lookup("/")), q1, $3->place, q, -1);
+					}
+					else if(isInt($3->type)){
+						qid q1 = newtemp($$->type);
+						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+
+						emit(qid("/real", lookup("/")), $1->place, q1, q, -1);
+					}
+					else{
+						emit(qid("/real", lookup("/")), $1->place, $3->place, q, -1);
+					}
+				}
+
 			}
-			else if(temp == "float"){
-				$$->type = "long double";
-
-				//--3AC
-
-				qid q = newtemp("long double");
-				$$->place = q;
-				$$->nextlist.clear();
-
-				if(isInt($1->type)){
-					qid q1 = newtemp($$->type);
-					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
-
-					emit(qid("/real", lookup("/")), q1, $3->place, q, -1);
-				}
-				else if(isInt($3->type)){
-					qid q1 = newtemp($$->type);
-					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
-
-					emit(qid("/real", lookup("/")), $1->place, q1, q, -1);
-				}
-				else{
-					emit(qid("/real", lookup("/")), $1->place, $3->place, q, -1);
-				}
+			else{
+				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for / operator").c_str());
+				$$->is_error = 1;
 			}
-
 		}
 		else{
-			yyerror("Incompatible type for / operator");
+			$$->is_error = 1;
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
@@ -691,22 +798,28 @@ multiplicative_expression
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode("%" ,attr);
 
-		//Semantic
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		if($3->intVal!=0)$$->intVal = $1->intVal % $3->intVal;
-		string temp =mulExp($1->type,$3->type,'%');
-		if(temp == "int"){
-			$$->type = "long long" ;
+		if(!($1->is_error || $3->is_error)){
+			//Semantic
+			if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
+			if($3->intVal!=0)$$->intVal = $1->intVal % $3->intVal;
+			string temp =mulExp($1->type,$3->type,'%');
+			if(temp == "int"){
+				$$->type = "long long" ;
 
-			//--3AC
-			qid q = newtemp("long long");
-			$$->place = q;
-			$$->nextlist.clear();
-			emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
+				//--3AC
+				qid q = newtemp("long long");
+				$$->place = q;
+				$$->nextlist.clear();
+				emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
 
+			}
+			else{
+				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for % operator").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror("Incompatible type for % operator");
+			$$->is_error = 1;
 		}
 
 	}
@@ -727,40 +840,47 @@ additive_expression
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		
 		string temp = addExp($1->type,$3->type,'+');
-		if(!temp.empty()){
-			if(temp == "int")	$$->type = "long long";
-			else if(temp == "real")	$$->type = "long double";
-			else $$->type =  temp;
+		
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "int")	$$->type = "long long";
+				else if(temp == "real")	$$->type = "long double";
+				else $$->type =  temp;
 
-			$$->intVal = $1->intVal + $3->intVal;
-			$$->realVal = $1->realVal + $3->realVal;
-			$$->temp_name = $1->temp_name + " + " + $3->temp_name;
+				$$->intVal = $1->intVal + $3->intVal;
+				$$->realVal = $1->realVal + $3->realVal;
+				$$->temp_name = $1->temp_name + " + " + $3->temp_name;
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			int cond1 = (isInt($1->type) && isFloat($3->type));
-			int cond2 = (isInt($3->type) && isFloat($1->type));
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				int cond1 = (isInt($1->type) && isFloat($3->type));
+				int cond2 = (isInt($3->type) && isFloat($1->type));
 
-			if(cond1){
-				qid temp2 = newtemp($3->type);
-				emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-				emit(qid("+"+temp, lookup("+")), temp2, $3->place, temp1, -1);
-			}
-			else if(cond2){
-				qid temp2 = newtemp($1->type);
-				emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-				emit(qid("+"+temp, lookup("+")), $1->place, temp2, temp1, -1);
+				if(cond1){
+					qid temp2 = newtemp($3->type);
+					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
+					emit(qid("+"+temp, lookup("+")), temp2, $3->place, temp1, -1);
+				}
+				else if(cond2){
+					qid temp2 = newtemp($1->type);
+					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
+					emit(qid("+"+temp, lookup("+")), $1->place, temp2, temp1, -1);
+				}
+				else{
+					emit(qid("+"+temp, lookup("+")), $1->place, $3->place, temp1, -1);
+				}
+
+				$$->nextlist.clear();
+				$$->place = temp1;
 			}
 			else{
-				emit(qid("+"+temp, lookup("+")), $1->place, $3->place, temp1, -1);
+				//TODO
+				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for + operator").c_str());
+				$$->is_error = 1;
 			}
-
-			$$->nextlist.clear();
-			$$->place = temp1;
 		}
 		else{
-			//TODO
-			yyerror(("Incompatible types " + $1->type + " and " + $3->type + " for + operator").c_str());
+			$$->is_error = 1;
 		}
 	}
 	| additive_expression '-' multiplicative_expression {
@@ -773,40 +893,46 @@ additive_expression
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 
 		string temp = addExp($1->type,$3->type,'-');
-		if(!temp.empty()){
-			if(temp == "int")$$->type = "long long";
-			else if(temp == "real")$$->type = "long double";
-			else $$->type = temp;
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "int")$$->type = "long long";
+				else if(temp == "real")$$->type = "long double";
+				else $$->type = temp;
 
-			$$->intVal = $1->intVal - $3->intVal;
-			$$->realVal = $1->realVal - $3->realVal;
-			$$->temp_name = $1->temp_name + " - " + $3->temp_name;
+				$$->intVal = $1->intVal - $3->intVal;
+				$$->realVal = $1->realVal - $3->realVal;
+				$$->temp_name = $1->temp_name + " - " + $3->temp_name;
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			int cond1 = (isInt($1->type) && isFloat($3->type));
-			int cond2 = (isInt($3->type) && isFloat($1->type));
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				int cond1 = (isInt($1->type) && isFloat($3->type));
+				int cond2 = (isInt($3->type) && isFloat($1->type));
 
-			if(cond1){
-				qid temp2 = newtemp($3->type);
-				emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-				emit(qid("-"+temp, lookup("-")), temp2, $3->place, temp1, -1);
-			}
-			else if(cond2){
-				qid temp2 = newtemp($1->type);
-				emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-				emit(qid("-"+temp, lookup("-")), $1->place, temp2, temp1, -1);
+				if(cond1){
+					qid temp2 = newtemp($3->type);
+					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
+					emit(qid("-"+temp, lookup("-")), temp2, $3->place, temp1, -1);
+				}
+				else if(cond2){
+					qid temp2 = newtemp($1->type);
+					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
+					emit(qid("-"+temp, lookup("-")), $1->place, temp2, temp1, -1);
+				}
+				else{
+					emit(qid("-"+temp, lookup("-")), $1->place, $3->place, temp1, -1);
+				}
+				
+				$$->nextlist.clear();
+				$$->place = temp1;
 			}
 			else{
-				emit(qid("-"+temp, lookup("-")), $1->place, $3->place, temp1, -1);
+				//TODO
+				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for - operator").c_str());
+				$$->is_error = 1;
 			}
-			
-			$$->nextlist.clear();
-			$$->place = temp1;
 		}
 		else{
-			//TODO
-			yyerror(("Incompatible types " + $1->type + " and " + $3->type + " for - operator").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -822,23 +948,29 @@ shift_expression
 		$$ = makenode($2 ,attr);
 
 		//Semantic
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		string temp = shiftExp($1->type,$3->type);
-		if(!temp.empty()){
-			$$->type = $1->type;
+		if(!$1->is_error && !$3->is_error){
+			if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
+			string temp = shiftExp($1->type,$3->type);
+			if(!temp.empty()){
+				$$->type = $1->type;
 
-			$$->intVal = $1->intVal << $3->intVal;
-			$$->temp_name = $1->temp_name + " << " + $3->temp_name;
+				$$->intVal = $1->intVal << $3->intVal;
+				$$->temp_name = $1->temp_name + " << " + $3->temp_name;
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("<<", lookup("<<")), $1->place, $3->place, temp1, -1);
-			
-			$$->nextlist.clear();
-			$$->place = temp1;
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("<<", lookup("<<")), $1->place, $3->place, temp1, -1);
+				
+				$$->nextlist.clear();
+				$$->place = temp1;
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <<").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary <<").c_str());
+			$$->is_error = 1;
 		}
 
 	}
@@ -851,21 +983,28 @@ shift_expression
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = shiftExp($1->type,$3->type);
-		if(!temp.empty()){
-			$$->type = $1->type;
 
-			$$->intVal = $1->intVal >> $3->intVal;
-			$$->temp_name = $1->temp_name + " >> " + $3->temp_name;
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				$$->type = $1->type;
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid(">>", lookup(">>")), $1->place, $3->place, temp1, -1);
-			
-			$$->nextlist.clear();
-			$$->place = temp1;
+				$$->intVal = $1->intVal >> $3->intVal;
+				$$->temp_name = $1->temp_name + " >> " + $3->temp_name;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid(">>", lookup(">>")), $1->place, $3->place, temp1, -1);
+				
+				$$->nextlist.clear();
+				$$->place = temp1;
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >>").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary >>").c_str());
+			$$->is_error = 1;
 		}
 	}
 	; 
@@ -883,27 +1022,34 @@ relational_expression
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = relExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
+
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "bool"){
+					$$->type = "bool";
+				}
+				else if(temp == "Bool"){
+					$$->type = "bool";
+					 warning("Comparison between pointer and integer");
+				}
+
+				if($1->intVal < $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("<", lookup("<")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
 			}
-			else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <").c_str());
+				$$->is_error = 1;
 			}
-
-			if($1->intVal < $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
-
-
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("<", lookup("<")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary <").c_str());
+			$$->is_error = 1;
 		}
 
 
@@ -917,26 +1063,33 @@ relational_expression
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = relExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-			}
-			else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
 
-			if($1->intVal > $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "bool"){
+					$$->type = "bool";
+				}
+				else if(temp == "Bool"){
+					$$->type = "bool";
+					 warning("Comparison between pointer and integer");
+				}
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid(">", lookup(">")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
+				if($1->intVal > $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid(">", lookup(">")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary >").c_str());
+			$$->is_error = 1;
 		}
 	}
 	| relational_expression LE_OP shift_expression {
@@ -948,26 +1101,33 @@ relational_expression
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = relExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-			}
-			else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
 
-			if($1->intVal <= $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "bool"){
+					$$->type = "bool";
+				}
+				else if(temp == "Bool"){
+					$$->type = "bool";
+					 warning("Comparison between pointer and integer");
+				}
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("<=", lookup("<=")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
+				if($1->intVal <= $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("<=", lookup("<=")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <=").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary <=").c_str());
+			$$->is_error = 1;
 		}
 	}
 	| relational_expression GE_OP shift_expression {
@@ -979,26 +1139,33 @@ relational_expression
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = relExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-			}
-			else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
 
-			if($1->intVal >= $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp == "bool"){
+					$$->type = "bool";
+				}
+				else if(temp == "Bool"){
+					$$->type = "bool";
+					 warning("Comparison between pointer and integer");
+				}
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid(">=", lookup(">=")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
+				if($1->intVal >= $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid(">=", lookup(">=")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >=").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary >=").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1016,24 +1183,31 @@ equality_expression
 		//Semantics
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = eqExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp =="ok"){
-				warning("Comparison between pointer and integer");
+
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					warning("Comparison between pointer and integer");
+				}
+				$$->type = "bool";
+
+				if($1->intVal == $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("==", lookup("==")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+				
 			}
-			$$->type = "bool";
-
-			if($1->intVal == $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
-
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("==", lookup("==")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
-			
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary ==").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary ==").c_str());
+			$$->is_error = 1;
 		}
 	}
 	| equality_expression NE_OP relational_expression {
@@ -1045,24 +1219,31 @@ equality_expression
 		//Semantics
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = eqExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp =="ok"){
-				warning("Comparison between pointer and integer");
+
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					warning("Comparison between pointer and integer");
+				}
+				$$->type = "bool";
+
+				if($1->intVal != $3->intVal) $$->intVal = 1;
+				else $$->intVal = 0;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("!=", lookup("!=")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+				
 			}
-			$$->type = "bool";
-
-			if($1->intVal != $3->intVal) $$->intVal = 1;
-			else $$->intVal = 0;
-
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("!=", lookup("!=")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
-			
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary !=").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary !=").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1078,22 +1259,29 @@ and_expression
 		//Semantics
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = bitExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp =="ok"){
-				$$->type = "bool";
-			}
-			else $$->type = "long long";
-			
-			$$->intVal = $1->intVal & $3->intVal;
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("&", lookup("&")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					$$->type = "bool";
+				}
+				else $$->type = "long long";
+				
+				$$->intVal = $1->intVal & $3->intVal;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("&", lookup("&")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+			}
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary &").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary &").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1109,23 +1297,30 @@ exclusive_or_expression
 		//Semantics
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = bitExp($1->type,$3->type);
-		if(!temp.empty()){
-			if(temp =="ok"){
-				$$->type = "bool";
+
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					$$->type = "bool";
+				}
+				else $$->type = "long long";
+
+				$$->intVal = $1->intVal ^ $3->intVal;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("^", lookup("^")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+				
 			}
-			else $$->type = "long long";
-
-			$$->intVal = $1->intVal ^ $3->intVal;
-
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("^", lookup("^")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
-			
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary ^").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary ^").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1144,23 +1339,29 @@ inclusive_or_expression
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 		string temp = bitExp($1->type,$3->type);
 
-		if(!temp.empty()){
-			if(temp =="ok"){
-				$$->type = "bool";
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					$$->type = "bool";
+				}
+				else $$->type = "long long";
+				
+				$$->intVal = $1->intVal | $3->intVal;
+
+				// 3AC
+				qid temp1 = newtemp($$->type);
+				emit(qid("|", lookup("|")), $1->place, $3->place, temp1, -1);
+				$$->nextlist.clear();
+				$$->place = temp1; 
+
 			}
-			else $$->type = "long long";
-			
-			$$->intVal = $1->intVal | $3->intVal;
-
-			// 3AC
-			qid temp1 = newtemp($$->type);
-			emit(qid("|", lookup("|")), $1->place, $3->place, temp1, -1);
-			$$->nextlist.clear();
-			$$->place = temp1; 
-
+			else{
+				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary |").c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			yyerror(("Invalid operands of types " + $1->type + " and " + $3->type + " to binary |").c_str());
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1175,35 +1376,42 @@ logical_and_expression
 		$$ = makenode("&&",attr);
 
 		// Semantics
-		$$->type = string("bool");
-		$$->isInit = (($1->isInit) & ($3->isInit));   
-		$$->intVal = $1->intVal && $3->intVal;
+		if(!$1->is_error && !$3->is_error){
+			$$->type = string("bool");
+			$$->isInit = (($1->isInit) & ($3->isInit));   
+			$$->intVal = $1->intVal && $3->intVal;
 
-		// 3AC
-		if($3->truelist.empty()){
-			emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
-			$3->truelist.push_back(code.size()-1);
-			emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-			$3->falselist.push_back(code.size()-1);
+			// 3AC
+			if($3->truelist.empty()){
+				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+				$3->truelist.push_back(code.size()-1);
+				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				$3->falselist.push_back(code.size()-1);
+			}
+
+			backpatch($1->truelist, $2);
+			$$->truelist = $3->truelist;
+			$$->falselist = $1->falselist;
+			$$->falselist.insert($$->falselist.end(), $3->falselist.begin(), $3->falselist.end());
 		}
-
-		backpatch($1->truelist, $2);
-		$$->truelist = $3->truelist;
-		$$->falselist = $1->falselist;
-		$$->falselist.insert($$->falselist.end(), $3->falselist.begin(), $3->falselist.end());
-
+		else{
+			$$->is_error = 1;
+		}
 	}
 	;
 
 GOTO_AND
 	: logical_and_expression AND_OP {
-		if($1->truelist.empty()){
-			emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
-			$1->truelist.push_back(code.size()-1);
-			emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-			$1->falselist.push_back(code.size()-1);
-		}
 		$$ = $1;
+		if(!$1->is_error){
+			if($1->truelist.empty()){
+				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				$1->truelist.push_back(code.size()-1);
+				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				$1->falselist.push_back(code.size()-1);
+			}
+		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -1217,35 +1425,45 @@ logical_or_expression
 		$$ = makenode("||",attr);
 
 		// Semantics
-		$$->type = string("bool");
-		$$->isInit = (($1->isInit) & ($3->isInit));   
-		$$->intVal = $1->intVal || $3->intVal;
 
-		// 3AC
+		if(!$1->is_error && !$3->is_error){
+			$$->type = string("bool");
+			$$->isInit = (($1->isInit) & ($3->isInit));   
+			$$->intVal = $1->intVal || $3->intVal;
 
-		if($3->truelist.empty()){
-			emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
-			$3->truelist.push_back(code.size()-1);
-			emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-			$3->falselist.push_back(code.size()-1);
+			// 3AC
+
+			if($3->truelist.empty()){
+				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+				$3->truelist.push_back(code.size()-1);
+				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				$3->falselist.push_back(code.size()-1);
+			}
+
+			backpatch($1->falselist, $2);
+			$$->truelist = $1->truelist;
+			$$->truelist.insert($$->truelist.end(), $3->truelist.begin(), $3->truelist.end());
+			$$->falselist = $3->falselist;
 		}
-
-		backpatch($1->falselist, $2);
-		$$->truelist = $1->truelist;
-		$$->truelist.insert($$->truelist.end(), $3->truelist.begin(), $3->truelist.end());
-		$$->falselist = $3->falselist;
+		else{
+			$$->is_error = 1;
+		}
 	}
 	;
 
 GOTO_OR
 	: logical_or_expression OR_OP {
-		if($1->truelist.empty()){
-			emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
-			$1->truelist.push_back(code.size()-1);
-			emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-			$1->falselist.push_back(code.size()-1);
-		}
 		$$ = $1;
+		if(!$1->is_error){
+			if($1->truelist.empty()){
+				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				$1->truelist.push_back(code.size()-1);
+				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				$1->falselist.push_back(code.size()-1);
+			}
+		}
+		else $$->is_error = 1;
+		
 	}
 	;
 
@@ -1260,47 +1478,57 @@ conditional_expression
 
 		// Semantics
 		string temp = condExp($3->type, $7->type);
-		if(!temp.empty()){
-			$$->type = "int";
 
-			if($1->intVal) $$->intVal = $3->intVal;
-			else $$->intVal = $7->intVal;
+		if(!$1->is_error && !$3->is_error && !$7->is_error){
+			if(!temp.empty()){
+				$$->type = "int";
 
-			// 3AC
-			qid temp1 = newtemp($$->type);
+				if($1->intVal) $$->intVal = $3->intVal;
+				else $$->intVal = $7->intVal;
+				if($1->isInit==1 && $3->isInit==1 && $7->isInit==1) $$->isInit=1;
 
-			backpatch($1->truelist, $2);
-			backpatch($1->falselist, $6);
-			code[$4-1].arg1 = $3->place;
-			code[$4-1].res = temp1;
+				// 3AC
+				qid temp1 = newtemp($$->type);
 
-			code[$8-1].arg1 = $7->place;
-			code[$8-1].res = temp1;
-			
-			$$->nextlist = $3->nextlist;
-			// ????
-			$$->nextlist.insert($$->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
-			$$->nextlist.push_back($4);
-			$$->nextlist.push_back($8);
+				backpatch($1->truelist, $2);
+				backpatch($1->falselist, $6);
+				code[$4-1].arg1 = $3->place;
+				code[$4-1].res = temp1;
 
-			$$->place = temp1;
+				code[$8-1].arg1 = $7->place;
+				code[$8-1].res = temp1;
+				
+				$$->nextlist = $3->nextlist;
+				// ????
+				$$->nextlist.insert($$->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
+				$$->nextlist.push_back($4);
+				$$->nextlist.push_back($8);
+
+				$$->place = temp1;
+			}
+			else {
+				yyerror("type mismatch in conditional expression");
+				$$->is_error = 1;
+			}
 		}
-		else {
-			yyerror("Type mismatch in Conditional Expression");
+		else{
+			$$->is_error = 1;
 		}
-		if($1->isInit==1 && $3->isInit==1 && $7->isInit==1) $$->isInit=1;
 	}
 	;
 
 GOTO_COND
 	: logical_or_expression '?' {
-		if($1->truelist.empty()){
-			emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
-			$1->truelist.push_back(code.size()-1);
-			emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-			$1->falselist.push_back(code.size()-1);
-		}
 		$$ = $1;
+		if(!$1->is_error){
+			if($1->truelist.empty()){
+				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				$1->truelist.push_back(code.size()-1);
+				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				$1->falselist.push_back(code.size()-1);
+			}
+		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -1309,7 +1537,6 @@ WRITE_GOTO
 		emit(qid("=", lookup("=")), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 		$$ = code.size()-1;
-		// $$->nextlist.push_back($$->quad);
 	}
 	;
 
@@ -1324,28 +1551,33 @@ assignment_expression
 
 		//Semantics
 		string temp = assignExp($1->type,$3->type,string($2));
-		if(!temp.empty()){
-			if(temp =="ok"){
-				$$->type = $1->type;
+
+		if(!$1->is_error && !$3->is_error){
+			if(!temp.empty()){
+				if(temp =="ok"){
+					$$->type = $1->type;
+				}
+				else if(temp == "warning"){
+					$$->type = $1->type;
+					warning("Assignment with incompatible pointer type");
+				} 
+
+				if($1->expType == 3 && $3->isInit){
+					updInit($1->temp_name);
+				}
+				
+				// 3ac 
+				int num = assign_exp($2, $$->type, $1->type, $3->type, $1->place, $3->place);
+				$$->place = $1->place;
+				backpatch($3->nextlist, num);
 			}
-			else if(temp == "warning"){
-				$$->type = $1->type;
-				warning("Assignment with incompatible pointer type");
-			} 
-			//error check ???
-			// 3ac 
-			int num = assign_exp($2, $$->type, $1->type, $3->type, $1->place, $3->place);
-			$$->place = $1->place;
-			backpatch($3->nextlist, num);
-
-
+			else{
+				yyerror(("Incompatible types when assigning " + $3->type + " type to " + $1->type).c_str());
+				$$->is_error = 1;
+			}
 		}
 		else{
-			//TODO
-			yyerror(("Incompatible types when assigning " + $3->type + " type to " + $1->type).c_str());
-		}
-		if($1->expType == 3 && $3->isInit){
-			updInit($1->temp_name);
+			$$->is_error = 1;
 		}
 	}
 	;
@@ -1365,6 +1597,9 @@ assignment_operator
 	| OR_ASSIGN			{$$ = $1;}
 	;
 
+
+// Abhishek TODO
+
 expression
 	: assignment_expression				{ $$ = $1; }
 	| expression ',' NEXT_QUAD assignment_expression		{
@@ -1373,11 +1608,17 @@ expression
 		insertAttr(attr, $4, "", 1);
 		$$ = makenode("expression",attr);
 
-		$$->type = string("void");
 
-		// 3AC 
-		backpatch($1->nextlist,$3);
-		$$->nextlist = $4->nextlist;
+		if(!$1->is_error && !$4->is_error){
+			$$->type = string("void");
+
+			// 3AC 
+			backpatch($1->nextlist,$3);
+			$$->nextlist = $4->nextlist;
+		}
+		else {
+			$$->is_error = 1;
+		}
 	}
 	;
 
@@ -1395,17 +1636,19 @@ declaration
 															$$ = makenode("declaration",attr);
 
 															type = "";
-															if($2->expType == 3){
-																// Clear the Symbol table of Function;
-																// But which function? We need func_name?
-																// $2->temp_name
-																// if func is already in the FuncArgs Map => Check argument types
-																// If argument types dont match, return error!
+															// if($2->expType == 3){
+															// 	// Clear the Symbol table of Function;
+															// 	// But which function? We need func_name?
+															// 	// $2->temp_name
+															// 	// if func is already in the FuncArgs Map => Check argument types
+															// 	// If argument types dont match, return error!
 
+															// }
+															if(!$1->is_error && !$2->is_error){
+																// 3AC
+																$$->nextlist = $2->nextlist;
 															}
-
-															// 3AC
-															$$->nextlist = $2->nextlist;
+															else $$->is_error = 1;
 															
 														}
 	// | error ';' {  ; cout<<"uff\n"; $$ = new treeNode; }
@@ -1419,20 +1662,28 @@ declaration_specifiers
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $2, "", 1);
 															$$ = makenode("declaration_specifiers",attr);
+
+															if($1->is_error || $2->is_error) $$->is_error = 1;
 														}
+
 	| type_specifier									{ $$ = $1; }
 	| type_specifier declaration_specifiers				{	
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $2, "", 1);
 															$$ = makenode("declaration_specifiers",attr);
+
+															if($1->is_error || $2->is_error) $$->is_error = 1;
 														}
+
 	| type_qualifier									{ $$ = $1; }
 	| type_qualifier declaration_specifiers				{
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $2, "", 1);
 															$$ = makenode("declaration_specifiers",attr);
+
+															if($1->is_error || $2->is_error) $$->is_error = 1;
 														}
 	;
 
@@ -1444,10 +1695,13 @@ init_declarator_list
 															insertAttr(attr, $1, "", 1);
 															insertAttr(attr, $4, "", 1);
 															$$ = makenode("init_declarator_list",attr);
-
-															// 3AC
-															backpatch($1->nextlist, $3);
-                                                 			$$->nextlist = $4->nextlist;
+															
+															if(!$1->is_error && !$4->is_error){
+																// 3AC
+																backpatch($1->nextlist, $3);
+																$$->nextlist = $4->nextlist;
+															}
+															else $$->is_error = 1;
 														}
 	;
 
@@ -1456,21 +1710,26 @@ init_declarator
 		$$ = $1;
 
 		// Semantics
-		if( currLookup($1->temp_name) ){
-			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str());
-		}
-		else if($1->expType == 3){
-			if(fn_decl){
-				yyerror("A parameter list without types is only allowed in a function definition");
-				fn_decl = 0;
+		if(!$1->is_error){
+			if(currLookup($1->temp_name) ){
+				string errstr = $1->temp_name + " is already declared";
+				yyerror(errstr.c_str());
+				$$->is_error = 1;
 			}
-			removeFuncProto();
+			else if($1->expType == 3){
+				if(fn_decl){
+					yyerror("A parameter list without types is only allowed in a function definition");
+					$$->is_error = 1;
+					fn_decl = 0;
+				}
+				removeFuncProto();
+			}
+			else{
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+				$$->place = qid($1->temp_name, lookup($1->temp_name));
+			}
 		}
-		else{
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
-			$$->place = qid($1->temp_name, lookup($1->temp_name));
-		}
+		else $$->is_error = 1;
 	}
 	| declarator '=' NEXT_QUAD initializer	{
 		vector<data> v;
@@ -1479,45 +1738,58 @@ init_declarator
 		$$ = makenode("=", v);
 	
 		// Semantics
-		if( currLookup($1->temp_name) ){
-			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str());
+		if(!$1->is_error && !$4->is_error){
+			if( currLookup($1->temp_name) ){
+				string errstr = $1->temp_name + " is already declared";
+				yyerror(errstr.c_str());
+			}
+			else{
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+			}
+			// string a = checkType($1->type, $4->type);
+			if(!isVoid($1->type)){
+				
+				$1->place = qid($1->temp_name, lookup($1->temp_name));
+				// TODO
+				// assignmentExpression("=", $1->type,$1->type, $4->type, $1->place, $4->place);
+				$$->place = $1->place;
+				$$->nextlist = $4->nextlist;
+				backpatch($1->nextlist, $3);
+			}
+			else { 
+				yyerror(("Invalid assignment to variable of type " + $1->type).c_str()); 
+			}
+			$$->place = qid($1->node_name, lookup($1->node_name));
 		}
-		else{
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
-		}
-		// string a = checkType($1->type, $4->type);
-		if(!isVoid($1->type)){
-			
-			$1->place = qid($1->temp_name, lookup($1->temp_name));
-			// TODO
-			// assignmentExpression("=", $1->type,$1->type, $4->type, $1->place, $4->place);
-			$$->place = $1->place;
-			$$->nextlist = $4->nextlist;
-			backpatch($1->nextlist, $3);
-        }
-        else { 
-			yyerror(("Invalid assignment to variable of type " + $1->type).c_str()); 
-		}
-        $$->place = qid($1->node_name, lookup($1->node_name));
+		else $$->is_error = 1;
 	}
 	;
 
 storage_class_specifier
 	: TYPEDEF	{
 		$$ = makeleaf($1);
+		yyerror("Not Implemented TYPEDEF yet!");
+		$$->is_error = 1;
 	}
 	| EXTERN	{
 		$$ = makeleaf($1);
+		yyerror("Not Implemented EXTERN");
+		$$->is_error = 1;
 	}
 	| STATIC	{
 		$$ = makeleaf($1);
+		yyerror("Not Implemented STATIC");
+		$$->is_error = 1;
 	}
 	| AUTO	{
 		$$ = makeleaf($1);
+		yyerror("Not Implemented AUTO");
+		$$->is_error = 1;
 	}
 	| REGISTER	{
 		$$ = makeleaf($1);
+		yyerror("Not Implemented REGISTER");
+		$$->is_error = 1;
 	}
 	;
 
@@ -1674,6 +1946,7 @@ struct_or_union_specifier
 		}
 		else if(structName == string($2)){
 			// We are inside a struct
+			structName = string($1) + "_" + structName;
 			type = "#INSIDE";
 		}
 		else {
@@ -1714,6 +1987,8 @@ struct_declaration_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("struct_declaration_list", v);
+
+		$$->is_error = $1->is_error || $2->is_error;
 	}
 	;
 
@@ -1725,6 +2000,7 @@ struct_declaration
 		$$ = makenode("struct_declaration", v);
 
 		type = "";
+		$$->is_error = $1->is_error || $2->is_error;
 	}
 	;
 
@@ -1735,6 +2011,7 @@ specifier_qualifier_list
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("specifier_qualifier_list", v);
 
+		$$->is_error = $1->is_error || $2->is_error; 
 		$$->type = $1->type + $2->type;
 	}
 	| type_specifier	{ $$ = $1; }
@@ -1743,6 +2020,8 @@ specifier_qualifier_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("specifier_qualifier_list", v);
+
+		$$->is_error = $1->is_error || $2->is_error; 
 	}
 	| type_qualifier	{ $$ = $1; }
 	;
@@ -1754,6 +2033,8 @@ struct_declarator_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("struct_declarator_list", v);
+
+		$$->is_error = $1->is_error || $3->is_error; 
 	}
 	;
 
@@ -1763,11 +2044,12 @@ struct_declarator
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1){
 			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
+			$$->is_error = 1;
 		} 
 	}
 	| ':' constant_expression	{ 
 		$$ = $2; 
-		// ????
+		// yyerror("Didn't implement this yet");
 	}
 	| declarator ':' constant_expression	{
 		vector<data> v;
@@ -1776,14 +2058,18 @@ struct_declarator
 		$$ = makenode(":", v);
 
 		// Semantics
-		if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1){
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
+		if(!$1->is_error && !$3->is_error){
+			if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1){
+				yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
+				$$->is_error = 1;
+			}
 		}
+		else $$->is_error = 1;
 	}
 	;
 
 enum_specifier
-	: ENUM '{' enumerator_list '}'		{
+	: ENUM '{' enumerator_list '}'	{
 		// TODO
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
@@ -1837,7 +2123,7 @@ declarator
 
 		//Semantics
 		if(type == "#INSIDE"){
-			$$->type = "STRUCT_" + structName + $1->type;
+			$$->type = structName + $1->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 8;
 			$$->expType = 2;
@@ -1894,19 +2180,22 @@ direct_declarator
 		$$ = makenode("direct_declarator", v);
 
 		// Semantics
-		if($1->expType == 1 || $1->expType == 2) {
-			$$->expType = 2;
-			$$->type = $1->type + "*";
-			$$->temp_name = $1->temp_name;
-			$$->size = $1->size * $3->intVal;
+		if(!$1->is_error && !$3->is_error){
+			if($1->expType == 1 || $1->expType == 2) {
+				$$->expType = 2;
+				$$->type = $1->type + "*";
+				$$->temp_name = $1->temp_name;
+				$$->size = $1->size * $3->intVal;
 
-			//3AC
-			$$->place = qid($$->temp_name, NULL);
+				//3AC
+				$$->place = qid($$->temp_name, NULL);
+			}
+			else {
+				yyerror(( $1->temp_name + " declared as function returning an array").c_str());
+				$$->is_error = 1;
+			}
 		}
-		else {
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
-		}
-
+		else $$->is_error = 1;
 	}
 	| direct_declarator '[' ']'{
 		vector<data> v;
@@ -1915,19 +2204,23 @@ direct_declarator
 		$$ = makenode("direct_declarator", v);
 
 		// Semantics
-		if($1->expType <=2 ) {
-			$$->expType = 2;
-			$$->type = $1->type + "*";
-			$$->temp_name = $1->temp_name;
-			$$->size = 8;
-			$$->intVal = 8;
+		if(!$1->is_error){
+			if($1->expType <=2 ) {
+				$$->expType = 2;
+				$$->type = $1->type + "*";
+				$$->temp_name = $1->temp_name;
+				$$->size = 8;
+				$$->intVal = 8;
 
-			//3AC
-			$$->place = qid($$->temp_name, NULL);
+				//3AC
+				$$->place = qid($$->temp_name, NULL);
+			}
+			else {
+				yyerror(( $1->temp_name + " declared as function returning an array").c_str());
+				$$->is_error = 1;
+			}
 		}
-		else {
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
-		}
+		else $$->is_error = 1;
 	}
 	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
 		vector<data> v, v2;
@@ -1938,51 +2231,56 @@ direct_declarator
 		$$ = makenode("direct_declarator", v);
 
 		// Semantics
-		if($1->expType == 1) {
-			$$->temp_name = $1->temp_name;
-			$$->expType = 3;
-			$$->type = $1->type;
-			$$->size = getSize($$->type);
+		if(!$1->is_error && !$4->is_error){
+			if($1->expType == 1) {
+				$$->temp_name = $1->temp_name;
+				$$->expType = 3;
+				$$->type = $1->type;
+				$$->size = getSize($$->type);
 
-			vector<string> temp = getFuncArgs($1->temp_name);
-			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg($$->temp_name, funcArgs);
-				funcArgs.clear();
-				funcName = string($1->temp_name);
-				funcType = $1->type;
-				//3AC
-				$$->place = qid($$->temp_name, NULL);
-				backpatch($4->nextlist,$6);
-				emit(pair<string,sym_entry*>("FUNC" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
-				
-			}
-			else{
-				// Check if temp is correct
-				if(temp == funcArgs){
+				vector<string> temp = getFuncArgs($1->temp_name);
+				if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+					insertFuncArg($$->temp_name, funcArgs);
 					funcArgs.clear();
 					funcName = string($1->temp_name);
 					funcType = $1->type;
 					//3AC
 					$$->place = qid($$->temp_name, NULL);
 					backpatch($4->nextlist,$6);
-					emit(pair<string,sym_entry*>("FUNC" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
+					emit(pair<string,sym_entry*>("FUNC_" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
 					
 				}
-				else {
-					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+				else{
+					// Check if temp is correct
+					if(temp == funcArgs){
+						funcArgs.clear();
+						funcName = string($1->temp_name);
+						funcType = $1->type;
+						//3AC
+						$$->place = qid($$->temp_name, NULL);
+						backpatch($4->nextlist,$6);
+						emit(pair<string,sym_entry*>("FUNC_" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
+						
+					}
+					else {
+						yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+						$$->is_error = 1;
+					}
 				}
-			}
 
-			
-		}
-		else {
-			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str());
+				
 			}
-			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str());
+			else {
+				if($1->expType == 2){
+					yyerror( ($1->temp_name + "declared as array of function").c_str());
+				}
+				else{
+					yyerror( ($1->temp_name + "declared as function of function").c_str());
+				}
+				$$->is_error = 1;
 			}
 		}
+		else $$->is_error =1;
 	}
 	| direct_declarator '(' A identifier_list ')'{
 		// Function should be already declared and used here.
@@ -1997,44 +2295,49 @@ direct_declarator
 		// Semantics
 		// ToDo : check if A is needed
 		// ToDo : Check if func declaration exists and args match
-		fn_decl = 1;
-		$$->temp_name = $1->temp_name;
-		$$->expType = 3;
-		$$->type = $1->type;
-		$$->size = getSize($$->type);
-		funcType = $1->type;
-		funcName = string($1->temp_name);
+		if(!$1->is_error && !$4->is_error){
+			fn_decl = 1;
+			$$->temp_name = $1->temp_name;
+			$$->expType = 3;
+			$$->type = $1->type;
+			$$->size = getSize($$->type);
+			funcType = $1->type;
+			funcName = string($1->temp_name);
 
-		vector<string> args = getFuncArgs($$->temp_name);
-		if(args.size() == 1 && args[0] == "#NO_FUNC"){
-			args.clear();
-			for(int i = 0; i < idList.size(); i++){
-				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
-				args.push_back("int");
-			}
-			insertFuncArg($1->temp_name, args);
-		}
-
-		if(args.size() == idList.size()) {
-			for(int i = 0; i < args.size(); i++) {
-				if(args[i] == "..."){
-					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
-					break;
+			vector<string> args = getFuncArgs($$->temp_name);
+			if(args.size() == 1 && args[0] == "#NO_FUNC"){
+				args.clear();
+				for(int i = 0; i < idList.size(); i++){
+					insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
+					args.push_back("int");
 				}
-				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
+				insertFuncArg($1->temp_name, args);
 			}
-			idList.clear();
 
-			
-			//3AC
-			$$->place = qid($$->temp_name, NULL);
-			emit(pair<string,sym_entry*>("FUNC" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
+			if(args.size() == idList.size()) {
+				for(int i = 0; i < args.size(); i++) {
+					if(args[i] == "..."){
+						yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+						$$->is_error = 1;
+						break;
+					}
+					insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
+				}
+				idList.clear();
 
+				
+				//3AC
+				$$->place = qid($$->temp_name, NULL);
+				emit(pair<string,sym_entry*>("FUNC_" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
+
+			}
+			else {
+				yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+				$$->is_error = 1;
+				idList.clear();
+			}
 		}
-		else {
-			yyerror(("Conflicting types for function " + $1->temp_name).c_str());
-			idList.clear();
-		}
+		else $$->is_error = 1;
 	}
 	| direct_declarator '(' A ')'{
 		vector<data> v;
@@ -2043,36 +2346,41 @@ direct_declarator
 		$$ = makenode("direct_declarator", v);
 
 		// Semantics
-		if($1->expType == 1) {
-			$$->temp_name = $1->temp_name;
-			$$->expType = 3;
-			$$->type = $1->type;
-			$$->size = getSize($$->type);
+		if(!$1->is_error){
+			if($1->expType == 1) {
+				$$->temp_name = $1->temp_name;
+				$$->expType = 3;
+				$$->type = $1->type;
+				$$->size = getSize($$->type);
 
-			vector<string> temp = getFuncArgs($1->temp_name);
-			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg($$->temp_name, funcArgs);
-				funcArgs.clear();
-				funcName = string($1->temp_name);
-				funcType = $1->type;
-			}
-			else{
-				yyerror(("Conflicting types for function " + $1->temp_name).c_str());
-			}
+				vector<string> temp = getFuncArgs($1->temp_name);
+				if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+					insertFuncArg($$->temp_name, funcArgs);
+					funcArgs.clear();
+					funcName = string($1->temp_name);
+					funcType = $1->type;
+				}
+				else{
+					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+					$$->is_error = 1;
+				}
 
-			//3AC
-			$$->place = qid($$->temp_name, NULL);
-			emit(pair<string,sym_entry*>("FUNC" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
-			
-		}
-		else {
-			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str());
+				//3AC
+				$$->place = qid($$->temp_name, NULL);
+				emit(pair<string,sym_entry*>("FUNC_" + $$->temp_name + " start :",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),pair<string,sym_entry*>("",NULL),-2);
+				
 			}
-			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str());
+			else {
+				if($1->expType == 2){
+					yyerror( ($1->temp_name + "declared as array of function").c_str());
+				}
+				else{
+					yyerror( ($1->temp_name + "declared as function of function").c_str());
+				}
+				$$->is_error = 1;
 			}
 		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -2093,7 +2401,7 @@ pointer
 		vector<data> v;
 		insertAttr(v,$2,"",1);
 		$$ = makenode("*(Pointer)",v);
-
+		if($2->is_error)$$->is_error = 1;
 		$$->type = "*";
 	}
 	| '*' pointer{
@@ -2102,6 +2410,7 @@ pointer
 		$$ = makenode("*(Pointer)",v);
 
 		$$->type = "*" + $2->type;
+		if($2->is_error)$$->is_error = 1;
 	}
 	| '*' type_qualifier_list pointer{
 		vector<data> v;
@@ -2110,6 +2419,7 @@ pointer
 		$$ = makenode("*(Pointer)",v);
 
 		$$->type = "*" + $3->type;
+		if($2->is_error || $3->is_error)$$->is_error = 1;
 	}
 	;
 
@@ -2122,6 +2432,8 @@ type_qualifier_list
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
 		$$ = makenode("type_qualifier_list",v);
+
+		if($1->is_error || $2->is_error)$$->is_error = 1;
 	}
 	;
 
@@ -2137,10 +2449,13 @@ parameter_type_list
 		$$ = makenode("parameter_type_list",v);
 
 		// Semantics
-		funcArgs.push_back("...");
+		if(!$1->is_error ){
+			funcArgs.push_back("...");
 
-		//3AC
-		$$->nextlist = $1->nextlist;
+			//3AC
+			$$->nextlist = $1->nextlist;
+		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -2154,10 +2469,12 @@ parameter_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("parameter_list",v);
-
-		// 3AC
-		backpatch($1->nextlist, $3);
-		$$->nextlist = $4->nextlist;
+		if(!$1->is_error && !$4->is_error){
+			// 3AC
+			backpatch($1->nextlist, $3);
+			$$->nextlist = $4->nextlist;
+		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -2169,16 +2486,20 @@ parameter_declaration
 		$$ = makenode("parameter_declaration",v);
 
 		// Semantics
-		type = "";
-		if($2->expType == 1 || $2->expType == 2) {
-			if(currLookup($2->temp_name)) {
-				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str());
+		if(!$1->is_error && !$2->is_error){
+			type = "";
+			if($2->expType == 1 || $2->expType == 2) {
+				if(currLookup($2->temp_name)) {
+					yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str());
+					$$->is_error = 1;
+				}
+				else {
+					insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
+				}
+				funcArgs.push_back($2->type);
 			}
-			else {
-				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
-			}
-			funcArgs.push_back($2->type);
 		}
+		else $$->is_error = 1;
 	}
 	| declaration_specifiers abstract_declarator{
 		vector<data> v;
@@ -2187,6 +2508,7 @@ parameter_declaration
 		$$ = makenode("parameter_declaration",v);
 
 		type = "";
+		if($1->is_error || $2->is_error)$$->is_error = 1;
 	}
 	| declaration_specifiers {
 		$$ = $1;
@@ -2209,8 +2531,10 @@ identifier_list
 		$$ = makenode("identifier_list",v);
 
 		// Semantics
-		idList.push_back($3);
-
+		if(!$1->is_error){
+			idList.push_back($3);
+		}
+		else $$->is_error = 1;
 	}
 	;
 
@@ -2225,7 +2549,8 @@ type_name
 		insertAttr(v,$2,"",1);
 		$$ = makenode("type_name",v);
 
-		$$->type = $1->type;
+		$$->type = $1->type + $2->type;
+		if($1->is_error || $2->is_error)$$->is_error = 1;
 	}
 	;
 
@@ -2241,6 +2566,8 @@ abstract_declarator
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
 		$$ = makenode("abstract_declarator",v);
+
+		if($1->is_error || $2->is_error)$$->is_error = 1;
 	}
 	;
 
@@ -2259,6 +2586,7 @@ direct_abstract_declarator
 		insertAttr(v,NULL,"[ ]",0);
 		insertAttr(v,$1,"",1);
 		$$ = makenode("direct_abstract_declarator",v);
+		if($1->is_error)$$->is_error = 1;
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
 		vector<data> v, v2;
@@ -2267,6 +2595,7 @@ direct_abstract_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = makenode("direct_abstract_declarator", v);
+		if($1->is_error || $3->is_error)$$->is_error = 1;
 	}
 	| '(' ')'{
 		$$ = makeleaf("( )") ;
@@ -2279,6 +2608,7 @@ direct_abstract_declarator
 		insertAttr(v, NULL, "( )", 0);
 		insertAttr(v, $1, "", 1);
 		$$ = makenode("direct_abstract_declarator",v);
+		if($1->is_error)$$->is_error = 1;
 	}
 	| direct_abstract_declarator '(' parameter_type_list ')'{
 		vector<data> v, v2;
@@ -2287,6 +2617,7 @@ direct_abstract_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = makenode("direct_abstract_declarator", v);
+		if($1->is_error || $3->is_error)$$->is_error = 1;
 	}
 	;
 
@@ -2299,10 +2630,11 @@ initializer
 	}
 	| '{' initializer_list ',' '}'{
 		$$ = $2;
-
-		//3AC
-		$$->place = $2->place;
-		$$->nextlist = $2->nextlist;
+		if(!$2->is_error){
+			//3AC
+			$$->place = $2->place;
+			$$->nextlist = $2->nextlist;
+		}
 	}
 	;
 
@@ -2317,20 +2649,24 @@ initializer_list
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("initializer_list", v);
 
-		//3AC
-		backpatch($1->nextlist, $3);
-		$$->nextlist = $4->nextlist;
+		if(!$1->is_error && !$4->is_error){
+			//3AC
+			backpatch($1->nextlist, $3);
+			$$->nextlist = $4->nextlist;
+		}
+		else $$->is_error = 1;
 	}
 	;
 
+
 statement
-	: labeled_statement		{$$ = $1;}
-	| compound_statement	{$$ = $1;}
-	| expression_statement	{$$ = $1;}
-	| selection_statement	{$$ = $1;}
-	| iteration_statement	{$$ = $1;}
-	| jump_statement		{$$ = $1;}
-	| error ';' 			{$$ = new treeNode; yyclearin; yyerrok;}
+	: labeled_statement		{$$ = $1; type = "";}
+	| compound_statement	{$$ = $1; type = "";}
+	| expression_statement	{$$ = $1; type = "";}
+	| selection_statement	{$$ = $1; type = "";}
+	| iteration_statement	{$$ = $1; type = "";}
+	| jump_statement		{$$ = $1; type = "";}
+	| error ';' 			{$$ = new treeNode; yyclearin; yyerrok; type = "";}
 	;
 
 labeled_statement
@@ -2340,11 +2676,15 @@ labeled_statement
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("labeled_statement", v);
 
-		// ??? check if already labelled using same label
+		if($4->is_error)	{
+			$$->is_error = 1;
+		}
+
+		// ??? check if already labelled using same label (else throw error)
 		$$->nextlist = $4->nextlist;
 		$$->caselist = $4->caselist;
-        $$->continuelist = $4->continuelist;
-        $$->breaklist = $4->breaklist;
+		$$->continuelist = $4->continuelist;
+		$$->breaklist = $4->breaklist;
 	}
 	| CASE_CODE NEXT_QUAD statement	{
 		vector<data> v;
@@ -2352,12 +2692,16 @@ labeled_statement
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("case", v);
 	
+		if($1->is_error || $3->is_error)	{
+			$$->is_error = 1;
+		}
+
 		backpatch($1->truelist, $2);
 		$3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
-        $$->breaklist = $3->breaklist;
-        $$->nextlist = $3->nextlist;
-        $$->caselist = $1->caselist;
-        $$->continuelist = $3->continuelist;
+		$$->breaklist = $3->breaklist;
+		$$->nextlist = $3->nextlist;
+		$$->caselist = $1->caselist;
+		$$->continuelist = $3->continuelist;
 	}
 	| DEFAULT ':' statement	{
 		vector<data> v;
@@ -2365,9 +2709,13 @@ labeled_statement
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("case", v);
 
+		if($3->is_error)	{
+			$$->is_error = 1;
+		}
+		
 		$$->breaklist= $3->breaklist;
-        $$->nextlist = $3->nextlist;
-        $$->continuelist=$3->continuelist;
+		$$->nextlist = $3->nextlist;
+		$$->continuelist=$3->continuelist;
 	}
 	;
 
@@ -2426,6 +2774,10 @@ compound_statement
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = makenode("compound_statement", v);
+
+		if($3->is_error || $5->is_error) {
+			$$->is_error = 1;
+		}
 		
 		if(func_flag>=2){
 			int bc = block_stack.top();
@@ -2467,6 +2819,10 @@ declaration_list
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("declaration_list", v);
 
+		if($1->is_error || $3->is_error)	{
+			$$->is_error = 1;
+		}
+
         backpatch($1->nextlist, $2);
         $$->nextlist = $3->nextlist;
 	}	
@@ -2479,6 +2835,10 @@ statement_list
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("statement_list", v);
+
+		if($1->is_error || $3->is_error)	{
+			$$->is_error = 1;
+		}
 
         backpatch($1->nextlist, $2);
         $$->nextlist = $3->nextlist;
@@ -2526,6 +2886,10 @@ selection_statement
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("if", v);
 
+		if($1->is_error || $3->is_error)	{
+			$$->is_error = 1;
+		}
+
         backpatch($1->truelist, $2);
 		$3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
         $$->nextlist= $3->nextlist;
@@ -2539,17 +2903,18 @@ selection_statement
 		insertAttr(v, $7, "", 1);
 		$$ = makenode("if-else", v);
 
+		if($1->is_error || $3->is_error || $7->is_error)	{
+			$$->is_error = 1;
+		}
+
         backpatch($1->truelist, $2);
         backpatch($1->falselist, $6);
 		$3->nextlist.insert($3->nextlist.end(), $4->nextlist.begin(), $4->nextlist.end());
-        
 		$3->nextlist.insert($3->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
-
         $$->nextlist = $3->nextlist;
 		$3->breaklist.insert($3->breaklist.end(), $7->breaklist.begin(), $7->breaklist.end());
 		$$->breaklist = $3->breaklist;
 		$3->continuelist.insert($3->continuelist.end(), $7->continuelist.begin(), $7->continuelist.end());
-
 		$$->continuelist = $3->continuelist;
 	}
 	| SWITCH '(' expression ')' statement	{
@@ -2558,9 +2923,11 @@ selection_statement
 		insertAttr(v, $5, "", 1);
 		$$ = makenode("switch", v);
 
-		// YAHA KARNA HAI 
-        // kind_of_backPatch_???($5->caselist, $3->place);
-        
+		if($3->is_error || $5->is_error)	{
+			$$->is_error = 1;
+		}
+
+        casepatch($5->caselist, $3->place);
         $5->nextlist.insert($5->nextlist.end(), $5->breaklist.begin(), $5->breaklist.end());
 		$$->nextlist= $5->nextlist;
         $$->continuelist= $5->continuelist;
@@ -2601,6 +2968,10 @@ iteration_statement
 		insertAttr(v, $4, "", 1);
 		insertAttr(v, $7, "", 1);
 		$$ = makenode("while-loop", v);
+
+		if($4->is_error || $7->is_error)	{
+			$$->is_error = 1;
+		}
 	
         backpatch($4->truelist, $6);
 		$7->nextlist.insert($7->nextlist.end(), $7->continuelist.begin(), $7->continuelist.end());
@@ -2615,6 +2986,10 @@ iteration_statement
 		insertAttr(v, $7, "", 1);
 		$$ = makenode("do-while-loop", v);
 
+		if($3->is_error || $7->is_error)	{
+			$$->is_error = 1;
+		}
+
         backpatch($7->truelist, $2);
         $3->nextlist.insert($3->nextlist.end(), $3->continuelist.begin(), $3->continuelist.end());
 		backpatch($3->nextlist, $6);
@@ -2627,6 +3002,10 @@ iteration_statement
 		insertAttr(v, $5, "", 1);
 		insertAttr(v, $8, "", 1);
 		$$ = makenode("for-loop(w/o update stmt)", v);
+
+		if($3->is_error || $5->is_error || $8->is_error)	{
+			$$->is_error = 1;
+		}
 
         backpatch($3->nextlist, $4);
         backpatch($5->truelist, $7);
@@ -2643,6 +3022,10 @@ iteration_statement
 		insertAttr(v, $7, "", 1);
 		insertAttr(v, $11, "", 1);
 		$$ = makenode("for-loop", v);
+
+		if($3->is_error || $5->is_error || $7->is_error || $11->is_error)	{
+			$$->is_error = 1;
+		}
 	
         backpatch($3->nextlist, $4);
         backpatch($5->truelist, $10);
@@ -2665,7 +3048,7 @@ jump_statement
 
         int a = code.size();
         emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
-        // store a somewhere and backpatch a with the goto address later (idk how)
+        // store a somewhere and backpatch a with the goto address later (idk how) and error handling
     }
 	| CONTINUE ';'	{
         $$ = makeleaf($1);
@@ -2692,6 +3075,10 @@ jump_statement
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("jump_stmt", v);
 
+		if($2->is_error)	{
+			$$->is_error = 1;
+		}
+
         emit(qid("RETURN", lookup("return")), $2->place, qid("", NULL), qid("", NULL), -1);
 	}
 	;
@@ -2705,6 +3092,11 @@ translation_unit
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("program", v);
+
+		if($1->is_error || $3->is_error)	{
+			$$->is_error = 1;
+			// Do delete stuff
+		}
 
         backpatch($1->nextlist, $2);
         $$->nextlist = $3->nextlist;
@@ -2734,9 +3126,20 @@ function_definition
 
 		// Semantics
 		type = "";
-		string fName = string($3);
-		printSymbolTable(curr_table ,fName + ".csv");
-		updSymbolTable(fName);
+		if($1->is_error || $2->is_error || $4->is_error || $5->is_error) {
+			$$->is_error = 1;
+		}
+
+		if($3->is_error) {
+			$$->is_error = 1;
+			removeFuncProto();
+		}
+		else {
+			
+			string fName = $3->node_name;
+			printSymbolTable(curr_table ,fName + ".csv");
+			updSymbolTable(fName);
+		}
 
         // 3AC not done
 	}
@@ -2748,11 +3151,22 @@ function_definition
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("function (w/o decl_list)", v);
 
-		// Semantics 
+		// Semantics
 		type = "";
-		string fName = string($3);
-		printSymbolTable(curr_table ,fName + ".csv");
-		updSymbolTable(fName);
+		if($1->is_error || $2->is_error || $4->is_error) {
+			$$->is_error = 1;
+		}
+
+		if($3->is_error) {
+			$$->is_error = 1;
+			removeFuncProto();
+		}
+		else {
+			
+			string fName = $3->node_name;
+			printSymbolTable(curr_table ,fName + ".csv");
+			updSymbolTable(fName);
+		}
 
         // 3AC not done
 	}
@@ -2760,14 +3174,25 @@ function_definition
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
 		$$ = makenode("function (w/o decl_specifiers)", v);
 
 		// Semantics
 		type = "";
-		string fName = string($2);
-		printSymbolTable(curr_table ,fName + ".csv");
-		updSymbolTable(fName);
+		if($1->is_error || $3->is_error || $4->is_error) {
+			$$->is_error = 1;
+		}
+
+		if($2->is_error) {
+			$$->is_error = 1;
+			removeFuncProto();
+		}
+		else {
+			
+			string fName = $2->node_name;
+			printSymbolTable(curr_table ,fName + ".csv");
+			updSymbolTable(fName);
+		}
 
         // 3AC not done
 	}
@@ -2779,9 +3204,19 @@ function_definition
 
 		// Semantics
 		type = "";
-		string fName = string($2);
-		printSymbolTable(curr_table ,fName + ".csv");
-		updSymbolTable(fName);
+		if($1->is_error || $3->is_error) {
+			$$->is_error = 1;
+		}
+
+		if($2->is_error) {
+			$$->is_error = 1;
+			removeFuncProto();
+		}
+		else {
+			string fName = $2->node_name;
+			printSymbolTable(curr_table ,fName + ".csv");
+			updSymbolTable(fName);
+		}
 
         // 3AC not done
 	}
@@ -2790,13 +3225,14 @@ function_definition
 
 F 
 	: %empty 		{
-		
+		$$ = new treeNode;
 		if (gst.find(funcName) != gst.end()){
 			yyerror(("Redefinition of function " + funcName).c_str());
+			$$->is_error = 1;
 		}
 		else{
 			makeSymbolTable(funcName, funcType);
-			$$ = strdup(funcName.c_str());
+			$$->node_name = (funcName);
 			block_count = 1;
 			type = "";
 		}
@@ -2990,6 +3426,7 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
+		print3AC_code();
 		// if(last[0] != ';' && last[0] != '}' ){
 		// 	print_error();
 		// 	cout<<" syntax error, expected ';' or '}' at end of file\n";  

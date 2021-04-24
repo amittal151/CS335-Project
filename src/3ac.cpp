@@ -22,6 +22,13 @@ void backpatch(vector<int>& bplist, int target){
     }
 }
 
+
+void casepatch(vector<int>& bplist, qid target){
+    for(int i=0;i<bplist.size(); i++){
+        code[bplist[i]].arg1 = target;
+    }
+}
+
 qid newtemp(string type){
     string temp_var = "#V"+to_string(counter);
     counter++;
@@ -31,20 +38,23 @@ qid newtemp(string type){
 
 int assign_exp(string op, string type, string type1,string type2, qid arg1, qid arg2){
     string temp_op = "";
-    qid sym_typ ;
-    qid sym_typ1 ;
+    qid sym_typ ;  
+    qid sym_typ1;
     int flag1 = 0;
     int a;
     string str = op;
     str.pop_back();
     if(op != "="){
-        temp_op = "" + op[0];        
+        temp_op = "" + op.substr(0, 1);    
+        sym_typ = newtemp(type);    
     }
-    sym_typ = newtemp(type);
+    else{
+        sym_typ = arg2;
+    }
     if(op == "<<=" ||op == ">>=")temp_op += temp_op;
     
 
-    if(isInt(type1) && isInt( type2) ){
+    if(isInt(type1) && isInt(type2) ){
         temp_op += "int" ;
         if(op != "=")a = code.size(), emit(qid( temp_op ,lookup(str)),arg1 ,arg2, sym_typ, -1);
     }
@@ -70,14 +80,18 @@ int assign_exp(string op, string type, string type1,string type2, qid arg1, qid 
     }
 
 
-    if(!(op == "=" && flag1 )) a = code.size(), emit( qid ("=", lookup("=")), sym_typ, qid("", NULL), arg1, -1);
+    if(!(op == "=" && flag1 )){ a = code.size(); emit( qid ("=", lookup("=")), sym_typ, qid("", NULL), arg1, -1);}
     else emit( qid ("=", lookup("=")), sym_typ1, qid("", NULL), arg1, -1);
 
     return a;
-
-
 }
 
+
+void print3AC_code(){
+    for(int i=0;i<code.size(); i++){
+        cout<<code[i].op.first<<"\t\t"<<code[i].arg1.first<<"\t\t"<<code[i].arg2.first<<"\t\t"<<code[i].res.first<<"\t\t"<<code[i].idx<<"\t\t"<<i<<endl;
+    }
+}
 
 
 
