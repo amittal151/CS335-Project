@@ -1726,6 +1726,7 @@ init_declarator
 					fn_decl = 0;
 				}
 				removeFuncProto();
+				code.pop_back();
 			}
 			else{
 				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
@@ -1754,7 +1755,7 @@ init_declarator
 				
 				$1->place = qid($1->temp_name, lookup($1->temp_name));
 				// TODO
-				// assignmentExpression("=", $1->type,$1->type, $4->type, $1->place, $4->place);
+				assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
 				$$->place = $1->place;
 				$$->nextlist = $4->nextlist;
 				backpatch($1->nextlist, $3);
@@ -2156,7 +2157,8 @@ direct_declarator
 
 		// Semantics
 		$$->expType = 1; // Variable
-		$$->type = type;
+		if(type != "") $$->type = type;
+		else $$->type = "int";
 		$$->temp_name = string($1);
 		$$->size = getSize(type);
 
@@ -2357,13 +2359,13 @@ direct_declarator
 				$$->size = getSize($$->type);
 
 				vector<string> temp = getFuncArgs($1->temp_name);
-				if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+				if((temp.size() == 1 && temp[0] == "#NO_FUNC") || funcArgs == temp){
 					insertFuncArg($$->temp_name, funcArgs);
 					funcArgs.clear();
 					funcName = string($1->temp_name);
 					funcType = $1->type;
 				}
-				else{
+				else {
 					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
 					$$->is_error = 1;
 				}
@@ -3282,14 +3284,12 @@ int yyerror(const char* s) {
 	
 	FILE *dupfile = fopen(curr_file, "r");
 	int count = 1;
-
 	char currline[256]; /* or other suitable maximum line size */
 	while (fgets(currline, sizeof(currline), dupfile) != NULL) {
 		if (count == line){
 			cout<<curr_file<<":"<<line<<":"<<column+1-strlen(yytext)<<":: "<<currline;
 			print_error();
 			cout<<s<<"\n\n";
-			cout<<"\033[1;34m Compilation terminated...exiting\033[0m"<<endl;
 			// exit(0);
 			return -1;
 		}
@@ -3297,7 +3297,8 @@ int yyerror(const char* s) {
 			count++;
 		}
 	}
-
+	print_error();
+	cout<<s<<endl;
 	fclose(dupfile);
 	return -1;
 }
