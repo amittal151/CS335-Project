@@ -165,6 +165,7 @@ string condExp(string a,string b){
 }
 int isInt(string type1){
    if(type1=="int") return 1;
+   if(type1=="bool")return 1;
    if(type1=="long") return 1;
    if(type1=="long long") return 1;
    if(type1=="long int") return 1;

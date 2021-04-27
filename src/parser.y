@@ -28,7 +28,7 @@ int Anon_StructCounter=0;
 vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
-
+int if_found = 0;
 map<string, vector<int>> gotolablelist;
 map<string, int> gotolabel;
 
@@ -1385,11 +1385,16 @@ logical_and_expression
 			$$->intVal = $1->intVal && $3->intVal;
 
 			// 3AC
-			if($3->truelist.empty()){
+			if($3->truelist.empty() && if_found){
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$3->falselist.push_back(code.size()-1);
+			}
+			else {
+				qid tmp = newtemp($$->type);
+				emit(qid("&&", lookup("&&")), $1->place, $3->place, tmp, -1);
+				$$->place = tmp;
 			}
 
 			backpatch($1->truelist, $2);
@@ -1406,8 +1411,10 @@ logical_and_expression
 GOTO_AND
 	: logical_and_expression AND_OP {
 		$$ = $1;
+		cout<<if_found<<endl;
+		cout<<"COMPILER IS SHIT"<<endl;
 		if(!$1->is_error){
-			if($1->truelist.empty()){
+			if($1->truelist.empty() && if_found){
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1436,11 +1443,16 @@ logical_or_expression
 
 			// 3AC
 
-			if($3->truelist.empty()){
+			if($3->truelist.empty() && if_found){
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$3->falselist.push_back(code.size()-1);
+			}
+			else {
+				qid tmp = newtemp($$->type);
+				emit(qid("||", lookup("||")), $1->place, $3->place, tmp, -1);
+				$$->place = tmp;
 			}
 
 			backpatch($1->falselist, $2);
@@ -1458,7 +1470,7 @@ GOTO_OR
 	: logical_or_expression OR_OP {
 		$$ = $1;
 		if(!$1->is_error){
-			if($1->truelist.empty()){
+			if($1->truelist.empty() && if_found){
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1546,16 +1558,16 @@ WRITE_GOTO
 
 assignment_expression
 	: conditional_expression	{$$ = $1;}
-	| unary_expression assignment_operator assignment_expression 	{
+	| unary_expression assignment_operator {if_found = 0;} assignment_expression {
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
+		insertAttr(attr, $4, "", 1);
 		$$ = makenode($2,attr);
 
 		//Semantics
-		string temp = assignExp($1->type,$3->type,string($2));
+		string temp = assignExp($1->type,$4->type,string($2));
 
-		if(!$1->is_error && !$3->is_error){
+		if(!$1->is_error && !$4->is_error){
 			if(!temp.empty()){
 				if(temp =="ok"){
 					$$->type = $1->type;
@@ -1565,17 +1577,17 @@ assignment_expression
 					warning("Assignment with incompatible pointer type");
 				} 
 
-				if($1->expType == 3 && $3->isInit){
+				if($1->expType == 3 && $4->isInit){
 					updInit($1->temp_name);
 				}
 				
 				// 3ac 
-				int num = assign_exp($2, $$->type, $1->type, $3->type, $1->place, $3->place);
+				int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
 				$$->place = $1->place;
-				backpatch($3->nextlist, num);
+				backpatch($4->nextlist, num);
 			}
 			else{
-				yyerror(("Incompatible types when assigning " + $3->type + " type to " + $1->type).c_str());
+				yyerror(("Incompatible types when assigning " + $4->type + " type to " + $1->type).c_str());
 				$$->is_error = 1;
 			}
 		}
@@ -1613,11 +1625,13 @@ expression
 
 
 		if(!$1->is_error && !$4->is_error){
-			$$->type = string("void");
-
+			$$->type = $1->type;
 			// 3AC 
 			backpatch($1->nextlist,$3);
+			backpatch($1->truelist,$3);
+			backpatch($1->falselist,$3);
 			$$->nextlist = $4->nextlist;
+			$$->place = $4->place;
 		}
 		else {
 			$$->is_error = 1;
@@ -2671,7 +2685,15 @@ statement
 	| selection_statement	{$$ = $1; type = "";}
 	| iteration_statement	{$$ = $1; type = "";}
 	| jump_statement		{$$ = $1; type = "";}
-	| error ';' 			{$$ = new treeNode; yyclearin; yyerrok; type = "";}
+	| error ';' 			{$$ = new treeNode; 
+				yyclearin; 
+				yyerrok; 
+				if_found = 0; 
+				type = ""; 
+				structName = "";
+				funcArgs.clear();
+				currArgs.clear();
+	}
 	;
 
 labeled_statement
@@ -2870,16 +2892,17 @@ expression_statement
 	;
 
 IF_CODE
-    : IF '(' expression ')' {
-        if($3->truelist.empty() && $3->falselist.empty()) {
+    : IF {if_found = 1;} '(' expression ')' {
+        if($4->truelist.empty() && $4->falselist.empty()) {
             int a = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $3->place, qid("", NULL ),0);
+            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
-            $3->truelist.push_back(a);
-            $3->falselist.push_back(b);
+            $4->truelist.push_back(a);
+            $4->falselist.push_back(b);
         }
-        $$ = $3;
+        $$ = $4;
+		if_found = 0;
     }
 	;
 
@@ -2948,30 +2971,32 @@ selection_statement
 	;
 
 EXPR_CODE
-    : expression {
-        if($1->truelist.empty() && $1->falselist.empty()) {
+    : {if_found = 1;} expression {
+        if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $1->place, qid("", NULL ),0);
+            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
-            $1->truelist.push_back(a);
-            $1->falselist.push_back(b);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
         }
-        $$ = $1;
+        $$ = $2;
+		if_found = 0;
     }
     ;
 
 EXPR_STMT_CODE
-    : expression_statement { 
-		if($1->truelist.empty() && $1->falselist.empty()) {
+    : {if_found = 1;} expression_statement { 
+		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $1->place, qid("", NULL ),0);
+            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
-            $1->truelist.push_back(a);
-            $1->falselist.push_back(b);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
         }
-        $$ = $1;
+        $$ = $2;
+		if_found = 0;
 	}
     ;
 
