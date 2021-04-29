@@ -1,8 +1,8 @@
-CC=g++ -std=c++14 -w -g
+CC=g++ -std=c++14 -w -g -fsanitize=address
 BIN=../bin
 SRC=.
 
-$(BIN)/parser: $(SRC)/parser.cpp $(SRC)/lexer.cpp $(SRC)/AST.cpp $(SRC)/symbol_table.cpp $(SRC)/typecheck.cpp  $(SRC)/3ac.cpp
+$(BIN)/parser: $(SRC)/parser.cpp $(SRC)/lexer.cpp $(SRC)/AST.cpp $(SRC)/symbol_table.cpp $(SRC)/typecheck.cpp $(SRC)/3ac.cpp $(SRC)/codegen.cpp 
 	mkdir -p $(BIN)
 	$(CC) -o $@ $^
 

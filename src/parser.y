@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <iostream>
 #include "AST.h"
+#include "codegen.h"
+#include <fstream>
 
 extern char* yytext;
 extern int column;
@@ -13,6 +15,7 @@ int yylex();
 int only_lexer = 0;
 FILE* dotfile;
 FILE* lexer_file;
+ofstream code_file;
 char* curr_file;
 
 string funcName = "";
@@ -202,7 +205,7 @@ postfix_expression
 						qid q = newtemp(temp);
 						$$->nextlist.clear();
 
-						emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+						// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
 						emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
 						
 						$$->place = q;
@@ -265,7 +268,7 @@ postfix_expression
 					$$->place = q;
 					$$->nextlist.clear();
 
-					emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+					// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
 					emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.size()), NULL), q, -1);
 
 					//DOUBT size() or size()+1?
@@ -3165,6 +3168,8 @@ function_definition
 
 		// Semantics
 		type = "";
+		funcName = "";
+		funcType = "";
 		if($1->is_error || $2->is_error || $4->is_error || $5->is_error) {
 			$$->is_error = 1;
 		}
@@ -3191,6 +3196,8 @@ function_definition
 
 		// Semantics
 		type = "";
+		funcName = "";
+		funcType = "";
 		if($1->is_error || $2->is_error || $4->is_error) {
 			$$->is_error = 1;
 		}
@@ -3218,6 +3225,8 @@ function_definition
 
 		// Semantics
 		type = "";
+		funcName = "";
+		funcType = "";
 		if($1->is_error || $3->is_error || $4->is_error) {
 			$$->is_error = 1;
 		}
@@ -3244,6 +3253,8 @@ function_definition
 
 		// Semantics
 		type = "";
+		funcName = ""; 
+		funcType = "";
 		if($1->is_error || $3->is_error) {
 			$$->is_error = 1;
 		}
@@ -3466,6 +3477,8 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
+		code_file.open("gen_code.asm");
+		genCode();
 		
 		// if(last[0] != ';' && last[0] != '}' ){
 		// 	print_error();

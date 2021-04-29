@@ -1,5 +1,8 @@
+#pragma once
+
 #include <bits/stdc++.h>
 #include "typecheck.h"
+
 using namespace std;
 
 typedef pair <string, sym_entry*> qid;

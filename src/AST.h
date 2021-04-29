@@ -1,5 +1,7 @@
+#pragma once
+
 #include <bits/stdc++.h>
-#include "3ac.h"
+#include "codegen.h"
 using namespace std;
 
 

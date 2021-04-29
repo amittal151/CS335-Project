@@ -1,3 +1,5 @@
+#pragma once
+
 #include <bits/stdc++.h>
 using namespace std;
 #define ll long long
@@ -12,6 +14,15 @@ typedef struct sym_entry{
 	bool init;
 	ull offset;
 	map<string, sym_entry* > * entry;
+	struct desc { 
+		string reg;
+		bool stack;
+		bool heap;
+	} addr_descriptor;
+
+	ull heap_mem = 0;
+	int next_use = -1;
+
 }sym_entry;
 
 typedef map<string, sym_entry* > sym_table; 
