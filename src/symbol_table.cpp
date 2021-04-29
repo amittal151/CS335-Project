@@ -130,6 +130,13 @@ void insertKeywords(){
 	for(auto h:op){
 		insertSymbol(*curr_table, h, "operator", 8, 1, nullptr);
 	}
+	
+	// Insert imp functions
+	insertSymbol(*curr_table, "printf", "FUNC_INT", 4, 0, nullptr);
+	vector<string> type = {"char*", "..."};
+	func_arg.insert({"printf", type});
+	insertSymbol(*curr_table, "scanf", "FUNC_INT", 4, 0, nullptr);
+	func_arg.insert({"scanf", type});
 }
 
 string getType(string id){

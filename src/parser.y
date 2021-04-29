@@ -1414,8 +1414,7 @@ logical_and_expression
 GOTO_AND
 	: logical_and_expression AND_OP {
 		$$ = $1;
-		cout<<if_found<<endl;
-		cout<<"COMPILER IS SHIT"<<endl;
+		
 		if(!$1->is_error){
 			if($1->truelist.empty() && if_found){
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
@@ -1671,7 +1670,6 @@ declaration
 															else $$->is_error = 1;
 															
 														}
-	// | error ';' {  ; cout<<"uff\n"; $$ = new treeNode; }
 	;
 
 
@@ -2833,7 +2831,6 @@ compound_statement
         $$->continuelist = $5->continuelist;
         $$->breaklist = $5->breaklist;
 	}
-	// | '{' error '}'  { yyerror("syntax error, expected '}' for previously seen '{' "); cout<<"unseen {\n"; $$ = new treeNode;    }
 	;
 
 CHANGE_TABLE

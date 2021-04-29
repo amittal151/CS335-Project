@@ -13,6 +13,7 @@ void emit(qid op, qid arg1, qid arg2, qid res, int idx){
     temp.arg2 = arg2;
     temp.res = res;
     temp.idx = idx;
+    if(idx == -1) temp.idx = code.size();
     code.push_back(temp);
 }
 
