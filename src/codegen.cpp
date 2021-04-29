@@ -155,6 +155,10 @@ void freeDeadTemp(ull idx){
 
 string get_mem_location(qid* sym){
 
+    if(is_integer(sym->first)){
+        return string("dword " + sym->first);
+    }
+
     if(sym->second->addr_descriptor.reg != ""){
         return sym->second->addr_descriptor.reg;
     }
