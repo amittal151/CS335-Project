@@ -125,7 +125,8 @@ primary_expression
 		$$->temp_name = $1->str;
 
 		//--3AC
-		$$->place = qid(($1->str), NULL);
+		sym_entry* temp = new sym_entry;
+		$$->place = qid(($1->str), temp);
 		$$->nextlist.clear();
 
 	}
@@ -205,7 +206,7 @@ postfix_expression
 						qid q = newtemp(temp);
 						$$->nextlist.clear();
 
-						// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+						// emit(qid("refParam", NULL), , NULL)qid("", qid("", NULL), q, -1);
 						emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
 						
 						$$->place = q;
