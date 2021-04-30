@@ -38,8 +38,8 @@ int is_integer(string sym){
 // x = 1
 void add_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-        // int val = (stoi(instr->arg1.first) + stoi(instr->arg2.first));
-        // code_file << "\tmov " << reg <<", " << "dword "<< val << "\n";
+        int val = (stoi(instr->arg1.first) + stoi(instr->arg2.first));
+        code_file << "\tmov " << get_mem_location(&instr->res, 0) <<", " << "dword "<< val << "\n";
     }
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
@@ -52,7 +52,8 @@ void add_op(quad* instr){
 void sub_op(quad* instr){
     // x = 2 - 3
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-
+        int val = (stoi(instr->arg1.first) - stoi(instr->arg2.first));
+        code_file << "\tmov " << get_mem_location(&instr->res, 0) <<", " << "dword "<< val << "\n";
     }
     // x = 1 - b
     else{
@@ -65,7 +66,8 @@ void sub_op(quad* instr){
 
 void mul_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-
+        int val = (stoi(instr->arg1.first) * stoi(instr->arg2.first));
+        code_file << "\tmov " << get_mem_location(&instr->res, 0) <<", " << "dword "<< val << "\n";
     }
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
@@ -77,7 +79,9 @@ void mul_op(quad* instr){
 
 void div_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-
+        // TODO check  div by zero
+        int val = (stoi(instr->arg1.first) / stoi(instr->arg2.first));
+        code_file << "\tmov " << get_mem_location(&instr->res, 0) <<", " << "dword "<< val << "\n";
     }
     else{
         free_reg("eax");
@@ -98,7 +102,8 @@ void div_op(quad* instr){
 
 void mod_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-
+        int val = (stoi(instr->arg1.first) % stoi(instr->arg2.first));
+        code_file << "\tmov " << get_mem_location(&instr->res, 0) <<", " << "dword "<< val << "\n";
     }
     else{
         free_reg("eax");
@@ -146,10 +151,8 @@ void clear_regs(){
 void free_reg(string reg){
     for(auto sym: reg_desc[reg]){
         sym.second->addr_descriptor.reg = "";
-        // cout<<sym.first<<" "<<reg<<" :::\n";
         code_file<<"\tmov "<<get_mem_location(&sym, 1)<<", "<<reg<<"\n";
     }
-    // code_file<<"\txor "<<reg<<", "<<reg<<"\n";
     reg_desc[reg].clear();
 }
 
@@ -305,14 +308,11 @@ void unary_op(quad* instr){
 }
 
 void logic_and(quad *instr){
-	string l1 = "", l2 = "";
-    l1 = get_label();
-    l2 = get_label();
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
-
+	
 	if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
 		int a = stoi(instr->arg1.first);
 		int b = stoi(instr->arg2.first);
+        string reg = get_mem_location(&instr->res, 1);
 		if(a && b){
 			code_file << "\tmov "<<reg<<", dword "<<1<<"\n";
 		}
@@ -321,6 +321,11 @@ void logic_and(quad *instr){
 		}
 	}
 	else{
+        string l1 = "", l2 = "";
+        l1 = get_label();
+        l2 = get_label();
+        string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
+
 		string mem2 = get_mem_location(&instr->arg2, 0);
 	
 		code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
@@ -337,48 +342,53 @@ void logic_and(quad *instr){
 }
 
 void logic_or(quad *instr){
-    string l1 = "", l2 = "";
-    l1 = get_label();
-    l2 = get_label();
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
-
+    
 	if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
 		int a = stoi(instr->arg1.first);
 		int b = stoi(instr->arg2.first);
+        string reg = get_mem_location(&instr->res, 1);
 		if(a || b){
 			code_file << "\tmov "<< reg <<", dword "<<1<<"\n";
 		}
 		else{
 			code_file << "\tmov "<<reg<<", dword "<<0<<"\n";
 		}
-        return ;
 	}
-    string mem2 = get_mem_location(&instr->arg2, 0);
+    else{
+        string l1 = "", l2 = "";
+        l1 = get_label();
+        l2 = get_label();
+        string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
 
-    code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
-    code_file << "\tjne "<<l1<<"\n";
-    code_file << "\tcmp "<<mem2<<", dword "<<0<<"\n";
-    code_file << "\tjne "<<l1<<"\n";
-    code_file << "\tmov "<<reg<<", dword "<<0<<"\n";
-    code_file << "\tjmp "<<l2<<"\n";
-    code_file << l1 <<":\n";
-    code_file << "\tmov "<<reg<<", dword "<<1<<"\n";
-    code_file << l2 <<":\n";
-    update_reg_desc(reg, &instr->res);
+        string mem2 = get_mem_location(&instr->arg2, 0);
+
+        code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
+        code_file << "\tjne "<<l1<<"\n";
+        code_file << "\tcmp "<<mem2<<", dword "<<0<<"\n";
+        code_file << "\tjne "<<l1<<"\n";
+        code_file << "\tmov "<<reg<<", dword "<<0<<"\n";
+        code_file << "\tjmp "<<l2<<"\n";
+        code_file << l1 <<":\n";
+        code_file << "\tmov "<<reg<<", dword "<<1<<"\n";
+        code_file << l2 <<":\n";
+        update_reg_desc(reg, &instr->res);
+    }
 }
 
 void bitwise_op(quad* instr){
     string op = instr->op.first;
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
+        
 
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = 0;
         if(op == "^")      val = (stoi(instr->arg1.first) ^ stoi(instr->arg2.first));
         else if(op == "&")  val = (stoi(instr->arg1.first) & stoi(instr->arg2.first));
         else if(op == "|") val = (stoi(instr->arg1.first) | stoi(instr->arg2.first));
-        code_file << "\tmov " << reg <<", " << "dword "<< val << "\n";
+        string mem = get_mem_location(&instr->res, 1);
+        code_file << "\tmov " << mem <<", " << "dword "<< val << "\n";
         return;
     }
+    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
     string instruction = "";
     if(op == "^")      instruction = "xor";
     else if(op == "&") instruction = "and";
@@ -394,7 +404,7 @@ void comparison_op(quad* instr){
     string l1 = "", l2 = "";
     l1 = get_label();
     l2 = get_label();
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);    
+        
 
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = 0;
@@ -404,11 +414,14 @@ void comparison_op(quad* instr){
         else if(op == ">")  val = (stoi(instr->arg1.first) > stoi(instr->arg2.first));
         else if(op == ">=") val = (stoi(instr->arg1.first) >= stoi(instr->arg2.first));
         else if(op == "!=") val = (stoi(instr->arg1.first) != stoi(instr->arg2.first));
-
-        code_file << "\tmov " << reg <<", " << "dword "<< val << "\n";
+        string mem = get_mem_location(&instr->res, 1);
+        code_file << "\tmov " << mem <<", " << "dword "<< val << "\n";
         return;
     }
+
+    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
     string jump_instruction = "";
+    
     if(op == "==")      jump_instruction = "je";
     else if(op == "<")  jump_instruction = "jl";
     else if(op == "<=") jump_instruction = "jle";
@@ -509,7 +522,7 @@ void end_basic_block(){
         for(auto sym: reg.second){
             if(sym.first[0] == '#' || is_integer(sym.first)) continue;
             sym.second->addr_descriptor.reg = "";
-            code_file<<"\tmov " << get_mem_location(&sym, 1) <<", "<<reg.first<<"\n";
+            code_file<<"\tmov " << get_mem_location(&sym, 0) <<", "<<reg.first<<"\n";
         }
         reg.second.clear();
     }
@@ -603,8 +616,8 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     int mn = 1000000;
     
     for (auto it : reg_desc){
-        if( (it.second.size() != 0 && (it.second.begin())->first[0] == '#' ) || (it.second.find(*sym2) != it.second.end()) ){
-            // skip registers containing temp. variables
+        if( it.second.find(*sym2) != it.second.end()){
+            // skip the reg containing second argument for an instruction
             continue;
         }
         if (it.second.size() < mn){
