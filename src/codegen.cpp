@@ -563,8 +563,14 @@ void update_reg_desc(string reg, qid* sym){
     for(auto it = reg_desc[reg].begin();it != reg_desc[reg].end(); it++){
         it->second->addr_descriptor.reg = "";
     }
+    
+    for(auto it = reg_desc.begin(); it != reg_desc.end(); it++){
+        it->second.erase(*sym);
+    }
+    
     reg_desc[reg].clear();
     reg_desc[reg].insert(*sym);          // x = y + z; 
+    cout<<sym->first<<" in "<<reg<<"\n";
     sym->second->addr_descriptor.heap = false;
     sym->second->addr_descriptor.stack = false;
     sym->second->addr_descriptor.reg = reg;
@@ -593,6 +599,19 @@ void freeDeadTemp(int idx){
         }
         for (auto v : temp){
             it.second.erase(v);
+        }
+    }
+    
+    for(auto it = reg_desc.begin(); it != reg_desc.end(); it++){
+        vector<qid> temp;
+        for(auto sym : it->second){
+            if(sym.second->next_use < idx && sym.second->next_use != -1){
+                temp.push_back(sym);
+                sym.second->addr_descriptor.reg = "";
+            }
+        }
+        for (auto v : temp){
+            it->second.erase(v);
         }
     }
 }
@@ -630,7 +649,7 @@ string get_mem_location(qid* sym, int flag){
 
 string getReg(qid* sym, qid* result, qid* sym2, int idx){
     // Allocates best register if available
-    // freeDeadTemp(idx);
+    freeDeadTemp(idx);
 
     // Case 1
     string reg = "";
