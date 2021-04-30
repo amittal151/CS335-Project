@@ -6,14 +6,14 @@ using namespace std;
 
 
 typedef struct{
-	long unsigned int node_id;
-	long long int size;
+	int node_id;
+	int size;
 	string node_name;
 	string type;
 	int expType;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
 	int isInit;
-	long long int intVal;
-	long double realVal;
+	int intVal;
+	double realVal;
 	string strVal;
 	int is_error = 0;
 
@@ -31,8 +31,8 @@ typedef struct{
 typedef struct{
 	string str;
 	string type;
-	long long int intVal;
-	long double realVal;
+	int intVal;
+	double realVal;
 	string strVal;
 }constants;
 

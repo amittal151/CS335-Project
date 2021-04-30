@@ -2515,7 +2515,7 @@ parameter_declaration
 					$$->is_error = 1;
 				}
 				else {
-					insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
+					paramInsert(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
 				}
 				funcArgs.push_back($2->type);
 			}
@@ -3276,6 +3276,7 @@ function_definition
 F 
 	: %empty 		{
 		$$ = new treeNode;
+		clear_paramoffset();
 		if (gst.find(funcName) != gst.end()){
 			yyerror(("Redefinition of function " + funcName).c_str());
 			$$->is_error = 1;

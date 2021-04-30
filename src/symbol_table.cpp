@@ -5,18 +5,19 @@ struct_sym_table struct_gst;
 map<sym_table*, sym_table*> parent_table;
 map<struct_sym_table*, struct_sym_table*> struct_parent_table;
 
-// map<string, ull> struct_size;
+// map<string, int> struct_size;
 map<string, vector<string> > func_arg;
-ull struct_offset;
+int struct_offset;
 sym_table* curr_table; //store pointer of the current symbol table
 sym_table* curr_structure;
 struct_sym_table *curr_struct_table;
-stack<ull> Goffset, Loffset, blockSz;
+stack<int> Goffset, Loffset, blockSz;
 
 typ_table typ_gst;  //map<string, string> typ_table;
 map<typ_table*, typ_table*> typ_parent_table;
 typ_table* curr_typ;
-ull max_size = 0;
+int max_size = 0;
+int param_offset = -4; // parameter offset for a func
 
 int struct_count = 1;
 int avl=0;
@@ -36,7 +37,7 @@ void symTable_init(){
 }
 
 
-sym_entry* createEntry(string type, ull size, bool init, ull offset, sym_table* ptr){
+sym_entry* createEntry(string type, int size, bool init, int offset, sym_table* ptr){
 	sym_entry* new_sym = new sym_entry();
 	new_sym->type = type;
 	new_sym->size = size;
@@ -88,7 +89,7 @@ void removeFuncProto(){
 }
 
 void updSymbolTable(string id){
-	ull temp = Goffset.top();
+	int temp = Goffset.top();
 	Goffset.pop();
 	Goffset.top()+=temp;
 
@@ -115,6 +116,11 @@ sym_entry* lookup(string id){
 	return nullptr;
 }
 
+int func_local_size(string name){
+	return gst[name]->size;
+	
+}
+
 sym_entry* currLookup(string id){
 	if((*curr_table).find(id)==(*curr_table).end()) return nullptr;
 	return (*curr_table)[id];
@@ -132,10 +138,10 @@ void insertKeywords(){
 	}
 	
 	// Insert imp functions
-	insertSymbol(*curr_table, "printf", "FUNC_INT", 4, 0, nullptr);
+	insertSymbol(*curr_table, "printf", "FUNC_int", 4, 0, nullptr);
 	vector<string> type = {"char*", "..."};
 	func_arg.insert({"printf", type});
-	insertSymbol(*curr_table, "scanf", "FUNC_INT", 4, 0, nullptr);
+	insertSymbol(*curr_table, "scanf", "FUNC_int", 4, 0, nullptr);
 	func_arg.insert({"scanf", type});
 }
 
@@ -155,7 +161,7 @@ void createStructTable(){
 }
 
 // insert struct attributes in struct tsymbol table
-int insertStructAttr(string attr, string type, ull size, bool init){  
+int insertStructAttr(string attr, string type, int size, bool init){  
 	if((*curr_structure).find(attr)==(*curr_structure).end()){
 		blockSz.top()+=size;
 		Goffset.top()+=size;
@@ -232,10 +238,20 @@ void createParamList(){
 	avl = 1;
 }
 
-void insertSymbol(sym_table& table, string id, string type, ull size, bool is_init, sym_table* ptr){
+void insertSymbol(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	table.insert(make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr)));
 	blockSz.top()+=size;
 	Goffset.top()+=size;
+}
+
+void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
+	cout<<id<<" "<<param_offset-size<<"\n";
+	table.insert(make_pair(id, createEntry(type, size, is_init, param_offset-size, ptr)));
+	param_offset-=size;
+}
+
+void clear_paramoffset(){
+	param_offset = -4;
 }
 
 vector<string> getFuncArgs(string id){
@@ -299,13 +315,13 @@ void printSymbolTable(sym_table* table, string file_name){
   	fprintf( file,"Name, Type, Size, isInitialized, Offset\n");
   	for(auto it: (*table)){
     	fprintf(file,"%s,%s,", it.first.c_str(), it.second->type.c_str());
-		fprintf(file, "%lld,%d,%lld\n", (it.second)->size, (it.second)->init, (it.second)->offset);
+		fprintf(file, "%d,%d,%d\n", (it.second)->size, (it.second)->init, (it.second)->offset);
   }
   fclose(file);
 }
 
 
-ull getStructsize(string struct_name){
+int getStructsize(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
 
 	while(temp){
@@ -317,7 +333,7 @@ ull getStructsize(string struct_name){
 	return 0;
 }
 
-ull getSize(string id){
+int getSize(string id){
   if(typeLookup(id)) return getStructsize(id);
   if(id == "char") return sizeof(char);
   if(id == "short") return sizeof(short);

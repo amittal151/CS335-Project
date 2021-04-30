@@ -3,7 +3,7 @@
 extern FILE *dotfile;
 
 
-long unsigned int NodeCounter = 0;
+int NodeCounter = 0;
 void beginAST(){
 	fprintf(dotfile, "digraph AST {\n\tordering=out;\n");
 }
@@ -51,11 +51,11 @@ treeNode *makenode(string s, vector<data> &v){
 	node->node_name = s;
 	node->node_id = ++NodeCounter;
 
-	vector<long unsigned int> op_id;
+	vector<int> op_id;
 
 	for(int i = 0; i<v.size(); ++i){
 		if(!v[i].is_node){
-			long unsigned int opid = ++NodeCounter;
+			int opid = ++NodeCounter;
 			op_id.push_back(opid);
 			if(v[i].str!="") fprintf(dotfile, "\t%lu [label=\"%s\"];\n", opid, v[i].str.c_str());
 		}
