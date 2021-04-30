@@ -51,9 +51,9 @@ extern typ_table* curr_typ;
 
 void symTable_init();
 sym_entry* createEntry(string type, int size, bool init, int offset);
-void makeSymbolTable(string name, string f_type);
+void makeSymbolTable(string name, string f_type,int flag);
 void removeFuncProto();
-void updSymbolTable(string id);
+void updSymbolTable(string id,int flag);
 sym_entry* lookup(string id);
 sym_entry* currLookup(string id);
 void insertKeywords();

@@ -1,7 +1,7 @@
 #include "codegen.h"
-
+#include "3ac.h"
 map<string, set<qid> > reg_desc;
-set<long long> leaders; 
+map<int ,string> leaders; 
 vector<qid> params; // stores the parameters as soon as we encounter first param
 map<int, string> stringlabels;
 
@@ -149,8 +149,10 @@ void clear_regs(){
 // free a specific register
 // eg for div we need eax, edx
 void free_reg(string reg){
+    cout<<reg<<"\n";
     for(auto sym: reg_desc[reg]){
         sym.second->addr_descriptor.reg = "";
+        cout<<sym.first<<"\n";
         code_file<<"\tmov "<<get_mem_location(&sym, 1)<<", "<<reg<<"\n";
     }
     reg_desc[reg].clear();
@@ -176,6 +178,7 @@ void call_func(quad *instr){
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
             string mem = get_mem_location(&params[i], 1);
+            
             if(reg_desc.find(mem) == reg_desc.end() && mem.substr(0,5) != "dword") mem = "dword "+mem;
             code_file<<"\tpush "<<mem<<"\n";
         }
@@ -262,14 +265,15 @@ void unary_op(quad* instr){
     // cout<<instr->arg1.second->addr_descriptor.reg;
    
     string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    string mem = get_mem_location(&instr->arg1, -1);
+    
     // cout<<mem<<" ";
     string instruction = "";
     if(op[2] == 'P'){
         if(op == "++P")      instruction = "inc";
         else if(op == "--P") instruction = "dec";
         code_file << "\t"<<instruction<< " "<<reg <<"\n";
-        code_file << "\tmov " << mem << ", " <<  reg<<"\n";
+        // string mem = get_mem_location(&instr->arg1, -1);
+        // code_file << "\tmov " << mem << ", " <<  reg<<"\n";
         update_reg_desc(reg, &instr->res);
         
     }
@@ -279,7 +283,8 @@ void unary_op(quad* instr){
         update_reg_desc(reg, &instr->res);
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
         code_file << "\t"<<instruction<< " "<<reg1 <<"\n";
-        code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
+        // string mem = get_mem_location(&instr->arg1, -1);
+        // code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
     }
     else if(op =="~" ) {
         instruction = "not";
@@ -441,6 +446,22 @@ void comparison_op(quad* instr){
     update_reg_desc(reg, &instr->res);
 }
 
+void goto_op(quad* instr){
+    end_basic_block();
+    int id = instr->idx;
+    // cout<<id<<"-----\n";
+    if(instr->arg1.first == "IF"){
+        string reg = get_mem_location(&instr->arg2, 0);
+
+        code_file << "\tcmp " << reg <<", " << "dword 0"<<"\n";
+        code_file << "\tjne "<<leaders[id]<<"\n";
+    }
+    else{
+        code_file << "\tjmp " << leaders[id] <<"\n";
+    }
+}
+
+
 
 void genCode(){
     // Prints final code to be generated in asm file
@@ -452,19 +473,21 @@ void genCode(){
     starting_code();
 
     for(auto it: leaders){
-        cout<<it<<" ";
+        cout<<it.first<<" "<<it.second<<"\n";
     }
     cout<<"\n";
 
     for (auto it=leaders.begin(); it != leaders.end(); it++){
+        code_file << it->second <<":\n";
         auto it1 = it;
         it1++;
         if(it1 == leaders.end()) break;
         int ended = 0;
-        int start = *it;
-        int end = *it1;
+        int start = it->first;
+        int end = it1->first;
         
         for(int idx=start; idx < end; idx++){
+            
             quad instr = code[idx];
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
                 gen_func_label(&instr);
@@ -507,6 +530,12 @@ void genCode(){
             else if(instr.op.first == "<<") lshift_op(&instr);
             else if(instr.op.first == ">>") rshift_op(&instr);
             else if(instr.op.first == "^" ||  instr.op.first == "&" || instr.op.first == "|") bitwise_op(&instr);
+            else if(instr.op.first == "GOTO") {
+                // cout<<instr.idx <<"---\n";
+                // print3AC_code();
+                goto_op(&instr);
+                ended=1;
+            }
             
             
         }
@@ -518,20 +547,21 @@ void genCode(){
 }
 
 void end_basic_block(){
-    for(auto reg: reg_desc){
-        for(auto sym: reg.second){
-            if(sym.first[0] == '#' || is_integer(sym.first)) continue;
-            sym.second->addr_descriptor.reg = "";
-            code_file<<"\tmov " << get_mem_location(&sym, 0) <<", "<<reg.first<<"\n";
+    for(auto reg = reg_desc.begin();reg!=reg_desc.end();reg++){
+        for(auto sym =reg->second.begin() ;sym!=reg->second.end(); sym++){
+            if(sym->first[0] == '#' || is_integer(sym->first)) continue;
+            sym->second->addr_descriptor.reg = "";
+            qid tem = *sym;
+            code_file<<"\tmov " << get_mem_location(&tem, 0) <<", "<<reg->first<<"\n";
         }
-        reg.second.clear();
+        reg->second.clear();
     }
 }
 
 
 void update_reg_desc(string reg, qid* sym){
-    for(auto it: reg_desc[reg]){
-        it.second->addr_descriptor.reg = "";
+    for(auto it = reg_desc[reg].begin();it != reg_desc[reg].end(); it++){
+        it->second->addr_descriptor.reg = "";
     }
     reg_desc[reg].clear();
     reg_desc[reg].insert(*sym);          // x = y + z; 
@@ -655,7 +685,7 @@ void nextUse(){
         it1++;
         if(it1 == leaders.end()) break;
 
-        for(int i= (*it1)-1; i>= (*it); i--){
+        for(int i= (it1->first)-1; i>= (it->first); i--){
             if(code[i].arg1.first != "" && code[i].arg1.first[0] == '#' && code[i].arg1.second && code[i].arg1.second->next_use == -1){
                 code[i].arg1.second->next_use = i;
             } 
@@ -669,20 +699,21 @@ void nextUse(){
 void findBasicBlocks(){
     // Finds Basic block in 3AC code.
 
-    for (long long i=0;i< (long long)code.size(); i++){
+    for (int i=0;i< (int)code.size(); i++){
+
         if (i == 0){
-            leaders.insert(i);
+            leaders.insert(make_pair(i, get_label()));
             continue;
         }
         if(code[i].op.first.substr(0, 5) == "FUNC_"){
-                if(code[i].op.first[code[i].op.first.length()-3] == 't')leaders.insert(i);
-                else if(i+1 != code.size()) leaders.insert(i+1);
+                if(code[i].op.first[code[i].op.first.length()-3] == 't') leaders.insert(make_pair(i, get_label()));
+                else if(i+1 != code.size()) leaders.insert(make_pair(i+1, get_label()));
         }
-        if(code[i].op.first == "GOTO"){
-            leaders.insert(code[i].idx);
-            if(!(code[i+1].op.first.substr(0, 5) == "FUNC_" &&  code[i].op.first[code[i].op.first.length()-3] == 'd'))leaders.insert(i+1);
+        else if(code[i].op.first == "GOTO"){
+            leaders.insert(make_pair(code[i].idx, get_label()));
+            leaders.insert(make_pair(i+1, get_label()));
         }   
     }
-    leaders.insert(code.size());
+    leaders.insert(make_pair(code.size(), get_label()));
 }
 

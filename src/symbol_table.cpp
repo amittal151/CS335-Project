@@ -47,7 +47,7 @@ sym_entry* createEntry(string type, int size, bool init, int offset, sym_table* 
 	return new_sym;
 }
 
-void makeSymbolTable(string name, string f_type){
+void makeSymbolTable(string name, string f_type, int offset_flag){
 	if(!avl){
 		sym_table* new_table = new sym_table;
 		struct_sym_table* new_struct_table = new struct_sym_table;
@@ -60,7 +60,7 @@ void makeSymbolTable(string name, string f_type){
 		}
 
 		Goffset.push(0);
-		blockSz.push(0);
+		if(offset_flag)blockSz.push(0);
 		parent_table.insert(make_pair(new_table, curr_table));
 		struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));
 		typ_parent_table.insert(make_pair(new_typ, curr_typ));
@@ -82,13 +82,13 @@ void makeSymbolTable(string name, string f_type){
 void removeFuncProto(){
 	// Removes the Temporary function Created in the Scope
 	avl = 0;
-	updSymbolTable("dummyF_name");
+	updSymbolTable("dummyF_name",1);
 	parent_table.erase((*curr_table)["dummyF_name"]->entry);
 	(*curr_table).erase("dummyF_name");
 	Loffset.pop();
 }
 
-void updSymbolTable(string id){
+void updSymbolTable(string id, int offset_flag){
 	int temp = Goffset.top();
 	Goffset.pop();
 	Goffset.top()+=temp;
@@ -100,9 +100,12 @@ void updSymbolTable(string id){
 	sym_entry* entry = lookup(id);
 	if(entry) entry->size = blockSz.top();
 
-	temp = blockSz.top();
-	blockSz.pop();
-	blockSz.top()+=temp;
+	if(offset_flag){
+		temp = blockSz.top();
+		blockSz.pop();
+		blockSz.top()+=temp;
+	}
+	
 
 }
 
@@ -234,12 +237,12 @@ int findTypeAttr(string struct_name, string id){
 
 void createParamList(){
 	Loffset.push(Goffset.top());
-	makeSymbolTable("dummyF_name", "");
+	makeSymbolTable("dummyF_name", "",1);
 	avl = 1;
 }
 
 void insertSymbol(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
-	table.insert(make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr)));
+	table.insert(make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr)));
 	blockSz.top()+=size;
 	Goffset.top()+=size;
 }

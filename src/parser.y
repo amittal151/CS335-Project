@@ -1033,10 +1033,10 @@ relational_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "bool"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else if(temp == "Bool"){
-					$$->type = "bool";
+					$$->type = "int";
 					 warning("Comparison between pointer and integer");
 				}
 
@@ -1074,10 +1074,10 @@ relational_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "bool"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else if(temp == "Bool"){
-					$$->type = "bool";
+					$$->type = "int";
 					 warning("Comparison between pointer and integer");
 				}
 
@@ -1112,10 +1112,10 @@ relational_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "bool"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else if(temp == "Bool"){
-					$$->type = "bool";
+					$$->type = "int";
 					 warning("Comparison between pointer and integer");
 				}
 
@@ -1150,10 +1150,10 @@ relational_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "bool"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else if(temp == "Bool"){
-					$$->type = "bool";
+					$$->type = "int";
 					 warning("Comparison between pointer and integer");
 				}
 
@@ -1196,7 +1196,7 @@ equality_expression
 				if(temp =="ok"){
 					warning("Comparison between pointer and integer");
 				}
-				$$->type = "bool";
+				$$->type = "int";
 
 				if($1->intVal == $3->intVal) $$->intVal = 1;
 				else $$->intVal = 0;
@@ -1232,7 +1232,7 @@ equality_expression
 				if(temp =="ok"){
 					warning("Comparison between pointer and integer");
 				}
-				$$->type = "bool";
+				$$->type = "int";
 
 				if($1->intVal != $3->intVal) $$->intVal = 1;
 				else $$->intVal = 0;
@@ -1270,7 +1270,7 @@ and_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp =="ok"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else $$->type = "long long";
 				
@@ -1308,7 +1308,7 @@ exclusive_or_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp =="ok"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else $$->type = "long long";
 
@@ -1349,7 +1349,7 @@ inclusive_or_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp =="ok"){
-					$$->type = "bool";
+					$$->type = "int";
 				}
 				else $$->type = "long long";
 				
@@ -1384,7 +1384,7 @@ logical_and_expression
 
 		// Semantics
 		if(!$1->is_error && !$3->is_error){
-			$$->type = string("bool");
+			$$->type = string("int");
 			$$->isInit = (($1->isInit) & ($3->isInit));   
 			$$->intVal = $1->intVal && $3->intVal;
 
@@ -1440,7 +1440,7 @@ logical_or_expression
 		// Semantics
 
 		if(!$1->is_error && !$3->is_error){
-			$$->type = string("bool");
+			$$->type = string("int");
 			$$->isInit = (($1->isInit) & ($3->isInit));   
 			$$->intVal = $1->intVal || $3->intVal;
 
@@ -2789,7 +2789,7 @@ compound_statement
 			string str = "Block" + to_string(bc);
 			string name = funcName+str+".csv";
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str,0);
 			func_flag--;
 		}
 	}
@@ -2802,7 +2802,7 @@ compound_statement
 			string str = "Block" + to_string(bc);
 			string name = funcName+str+".csv";
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str,0);
 			func_flag--;
 		}
 	}
@@ -2822,7 +2822,7 @@ compound_statement
 			string str = "Block" + to_string(bc);
 			string name = funcName+str+".csv";
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str,0);
 			func_flag--;
 		}
 
@@ -2841,7 +2841,7 @@ CHANGE_TABLE
 			block_stack.push(block_count);
 			block_count++;
 			func_flag++;
-			makeSymbolTable(str, "");
+			makeSymbolTable(str, "",0);
 		}
 		else func_flag++;
 	}
@@ -3180,7 +3180,7 @@ function_definition
 			
 			string fName = $3->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
-			updSymbolTable(fName);
+			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 	}
@@ -3208,7 +3208,7 @@ function_definition
 			
 			string fName = $3->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
-			updSymbolTable(fName);
+			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
@@ -3237,7 +3237,7 @@ function_definition
 			
 			string fName = $2->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
-			updSymbolTable(fName);
+			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
@@ -3264,7 +3264,7 @@ function_definition
 		else {
 			string fName = $2->node_name;
 			printSymbolTable(curr_table ,fName + ".csv");
-			updSymbolTable(fName);
+			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 		}
 
@@ -3282,7 +3282,7 @@ F
 			$$->is_error = 1;
 		}
 		else{
-			makeSymbolTable(funcName, funcType);
+			makeSymbolTable(funcName, funcType,1);
 			$$->node_name = (funcName);
 			block_count = 1;
 			type = "";
@@ -3477,7 +3477,7 @@ int main(int argc, char* argv[]){
 		yyrestart(yyin);
 		yyparse();
 		code_file.open("gen_code.asm");
-		genCode();
+		
 		
 		// if(last[0] != ';' && last[0] != '}' ){
 		// 	print_error();
@@ -3494,7 +3494,7 @@ int main(int argc, char* argv[]){
 	}
 
 	print3AC_code();
-
+	genCode();
 	endAST();
 
 	printSymbolTable(&gst, "#Global_Symbol_Table#.csv");

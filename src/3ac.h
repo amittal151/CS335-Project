@@ -22,6 +22,7 @@ void backpatch(vector<int>& , int);
 qid newtemp(string );
 int assign_exp(string op, string type, string type1,string type2, qid arg1, qid arg2);
 void casepatch(vector<int>& bplist, qid target);
+void print3AC_code();
 // string getTmpVar();
 // pair<string, sEntry*> getTmpSym(string type);
 // int emit (qid id1, qid id2, qid op, qid  res, int stmtNum);
