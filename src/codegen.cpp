@@ -527,9 +527,9 @@ void genCode(){
 
             else if(instr.op.first == "&&") logic_and(&instr);
             else if(instr.op.first == "||") logic_or(&instr);
-            else if(instr.op.first == "<<") lshift_op(&instr);
-            else if(instr.op.first == ">>") rshift_op(&instr);
-            else if(instr.op.first == "^" ||  instr.op.first == "&" || instr.op.first == "|") bitwise_op(&instr);
+            else if(instr.op.first.substr(0,2) == "<<") lshift_op(&instr);
+            else if(instr.op.first.substr(0,2) == ">>") rshift_op(&instr);
+            else if(instr.op.first[0] == '^' ||  instr.op.first[0] == '&' || instr.op.first[0] == '|') bitwise_op(&instr);
             else if(instr.op.first == "GOTO") {
                 // cout<<instr.idx <<"---\n";
                 // print3AC_code();
