@@ -3182,6 +3182,7 @@ function_definition
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+			backpatch_rem();
 		}
 	}
 
@@ -3210,6 +3211,7 @@ function_definition
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+			backpatch_rem();
 		}
 
         // 3AC not done
@@ -3239,6 +3241,7 @@ function_definition
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+			backpatch_rem();
 		}
 
         // 3AC not done
@@ -3266,6 +3269,7 @@ function_definition
 			printSymbolTable(curr_table ,fName + ".csv");
 			updSymbolTable(fName,1);
 			emit(qid("FUNC_" + $3->node_name + " end :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+			backpatch_rem();
 		}
 
         // 3AC not done

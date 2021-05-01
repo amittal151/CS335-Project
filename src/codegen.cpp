@@ -533,6 +533,7 @@ void genCode(){
             else if(instr.op.first == "GOTO") {
                 // cout<<instr.idx <<"---\n";
                 // print3AC_code();
+                
                 goto_op(&instr);
                 ended=1;
             }
@@ -589,18 +590,6 @@ void initializeRegs(){
 
 void freeDeadTemp(int idx){
     // free registers allocated to Dead temporaries
-    for(auto it : reg_desc){
-        vector<qid> temp;
-        for(auto sym : it.second){
-            if(sym.second->next_use < idx && sym.second->next_use != -1){
-                temp.push_back(sym);
-                sym.second->addr_descriptor.reg = "";
-            }
-        }
-        for (auto v : temp){
-            it.second.erase(v);
-        }
-    }
     
     for(auto it = reg_desc.begin(); it != reg_desc.end(); it++){
         vector<qid> temp;

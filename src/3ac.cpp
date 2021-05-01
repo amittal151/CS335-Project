@@ -87,6 +87,16 @@ int assign_exp(string op, string type, string type1,string type2, qid arg1, qid 
     return a;
 }
 
+void backpatch_rem(){
+    int i,j;
+    i = j = code.size()-1;
+    i--;
+    while(code[i].op.first.substr(0,5)!="FUNC_"){
+        if(code[i].op.first =="GOTO" && code[i].idx==0)code[i].idx = j;
+        i--;
+        
+    }
+}
 
 void print3AC_code(){
     for(int i=0;i<code.size(); i++){
