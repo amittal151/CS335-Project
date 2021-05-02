@@ -296,6 +296,11 @@ void unary_op(quad* instr){
         code_file << "\t"<<instruction<< " "<<reg <<"\n";        
         update_reg_desc(reg, &instr->res);
     }
+    else if(op == "unary+"){
+        // instruction = "neg";
+        // code_file << "\t"<<instruction<< " "<<reg <<"\n";        
+        update_reg_desc(reg, &instr->res);
+    }
     else if(op == "!"){
         string l1 = get_label();
         string l2 = get_label();
@@ -496,7 +501,8 @@ void genCode(){
                     ||instr.op.first.substr(0,2) == "--" 
                     ||instr.op.first == "!" 
                     ||instr.op.first == "~" 
-                    ||instr.op.first == "unary-" ) unary_op(&instr);
+                    ||instr.op.first == "unary-" 
+                    ||instr.op.first == "unary+") unary_op(&instr);
             else if(instr.op.first[0] == '+')    add_op(&instr);
             else if(instr.op.first == "=")   assign_op(&instr);
             else if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 'd'){

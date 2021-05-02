@@ -608,7 +608,7 @@ unary_operator
 		$$ = makeleaf("&");
 
 		//--3AC
-		$$->place = qid("&", lookup("&"));
+		$$->place = qid("unary&", lookup("&"));
 	}
 	| '*' {
 		$$ = makeleaf("*");
