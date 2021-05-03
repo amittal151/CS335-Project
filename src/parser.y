@@ -2153,13 +2153,13 @@ declarator
 		if(type == "#INSIDE"){
 			$$->type = structName + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;	// BONJOUR
 			$$->expType = 2;
 		}
 		else{
 			$$->type = $2->type + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;	// BONJOUR
 			$$->expType = 2;
 		}
 
@@ -2238,7 +2238,7 @@ direct_declarator
 				$$->expType = 2;
 				$$->type = $1->type + "*";
 				$$->temp_name = $1->temp_name;
-				$$->size = 8;
+				$$->size = 4;	// BONJOUR
 				$$->intVal = 8;
 
 				//3AC

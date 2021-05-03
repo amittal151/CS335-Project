@@ -338,6 +338,7 @@ int getStructsize(string struct_name){
 
 int getSize(string id){
   if(typeLookup(id)) return getStructsize(id);
+  if(1) return 4;
   if(id == "char") return sizeof(char);
   if(id == "short") return sizeof(short);
   if(id == "short int") return sizeof(short int);
@@ -360,7 +361,7 @@ int getSize(string id){
   if(id == "unsigned long long") return sizeof(unsigned long long);
   if(id == "unsigned long long int") return sizeof(unsigned long long int);
 
-  return 8; // for any ptr
+  return 4; // for any ptr
 }
 
 

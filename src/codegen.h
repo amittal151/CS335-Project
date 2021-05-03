@@ -35,5 +35,6 @@ void logic_and(quad* instr);
 void logic_or(quad* instr);
 void bitwise_op(quad* instr);
 void unary_op(quad* instr);
+void pointer_op(quad* instr);
 void free_reg(string reg);
 void goto_op(quad* instr);

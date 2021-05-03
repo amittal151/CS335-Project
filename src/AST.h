@@ -25,6 +25,7 @@ typedef struct{
 	vector<int> continuelist;
 	vector<int> nextlist;
 	vector<int> caselist;
+	
 }treeNode;
 
 
