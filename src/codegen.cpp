@@ -2,7 +2,7 @@
 #include "3ac.h"
 map<string, set<qid> > reg_desc;
 map<int ,string> leaders; 
-vector<qid> params; // stores the parameters as soon as we encounter first param
+stack<qid>  params; // stores the parameters as soon as we encounter first param
 map<int, string> stringlabels;
 
 int string_counter = 0; 
@@ -165,10 +165,15 @@ void call_func(quad *instr){
     }
 
     int curr_reg = 0;
-    for(int i = params.size()-1; i>=0; i--){
+    int i = stoi(instr->arg2.first);
+    int sz = i;
+
+    
+
+    while(i>0){
         // free_reg(func_regs[curr_reg]);
-        if(params[i].first[0] == '\"'){
-            string temp = params[i].first;
+        if(params.top().first[0] == '\"'){
+            string temp = params.top().first;
             temp[0] = '`', temp[temp.length()-1] = '`';
             stringlabels.insert({string_counter, temp});
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", str"<<string_counter<<"\n";
@@ -177,22 +182,25 @@ void call_func(quad *instr){
         }
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
-            string mem = get_mem_location(&params[i], 1);
+            string mem = get_mem_location(&params.top(), 1);
             
             if(reg_desc.find(mem) == reg_desc.end() && mem.substr(0,5) != "dword") mem = "dword "+mem;
             code_file<<"\tpush "<<mem<<"\n";
+            
         }
+        i--;
+        params.pop();
         // curr_reg++;
     }
     
     code_file<<"\tcall "<<instr->arg1.first<<"\n";
     
     // Clear args from stack
-    code_file<<"\tadd esp, "<<4*params.size()<<"\n";
+    code_file<<"\tadd esp, "<<4*sz<<"\n";
     reg_desc["eax"].insert(instr->res);
     instr->res.second->addr_descriptor.reg = "eax";
 
-    params.clear();
+   
 }
 
 void assign_op(quad* instr){
@@ -522,7 +530,7 @@ void genCode(){
                 ended = 1;
                 return_op(&instr);
             }
-            else if(instr.op.first == "param") params.push_back(instr.arg1);
+            else if(instr.op.first == "param") params.push(instr.arg1);
             else if(instr.op.first == "CALL") call_func(&instr);
             else if(instr.op.first == "=="  
                     ||instr.op.first == "<" 

@@ -30,7 +30,8 @@ string type = "";
 int Anon_StructCounter=0;
 vector<string> funcArgs;
 vector<string> idList;
-vector<string> currArgs;
+vector<vector<string> > currArgs(1,vector<string>() );
+
 int if_found = 0;
 map<string, vector<int>> gotolablelist;
 map<string, int> gotolabel;
@@ -191,6 +192,7 @@ postfix_expression
 		//Semantics
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type,2);
+		currArgs.push_back(vector<string>() ); 
 		if(!($1->is_error)){
 			if(!temp.empty()){	
 				$$->type = temp;
@@ -208,7 +210,8 @@ postfix_expression
 
 						// emit(qid("refParam", NULL), , NULL)qid("", qid("", NULL), q, -1);
 						emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
-						
+						currArgs.pop_back();
+						//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 						$$->place = q;
 					}
 				}
@@ -221,41 +224,43 @@ postfix_expression
 		else{
 			$$->is_error=1;
 		}
-		currArgs.clear(); 
+		//currArgs.clear(); 
 	}
-	| postfix_expression '(' argument_expression_list ')' {
+	| postfix_expression  '(' { currArgs.push_back(vector<string>() ); } argument_expression_list ')' {
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
+		insertAttr(attr, $4, "", 1);
 		$$ = makenode("postfix_expression", attr);
 
 		//Semantics
-		$$->isInit = $3->isInit;
+		$$->isInit = $4->isInit;
 		string temp = postfixExpression($1->type,3);
 
-		if(!($1->is_error || $3->is_error)){
+		if(!($1->is_error || $4->is_error)){
 			if(!temp.empty()){	
 				$$->type = temp;
 				if($1->expType ==3){
 					vector<string> funcArgs = getFuncArgs($1->temp_name);
-
+					vector<string> tempArgs =currArgs.back();
+					for(int i=0;i<tempArgs.size();i++)cout<<tempArgs[i]<<", ";
+					cout<<"\n";
 					for(int i=0;i<funcArgs.size();i++){
 						if(funcArgs[i]=="...")break;
-						if(currArgs.size()==i){
+						if(tempArgs.size()==i){
 							
 							yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
 							break;
 						}
-						string msg = checkType(funcArgs[i],currArgs[i]);
+						string msg = checkType(funcArgs[i],tempArgs[i]);
 
 						if(msg =="warning"){
-							warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
+							warning(("Incompatible conversion of " +  tempArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 						}
 						else if(msg.empty()){
 							yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
 							break;
 						}
-						if(i==funcArgs.size()-1 && i<currArgs.size()-1){
+						if(i==funcArgs.size()-1 && i<tempArgs.size()-1){
 							yyerror(("Too many Arguments to Function " + $1->temp_name).c_str());
 							break;
 						}
@@ -270,8 +275,9 @@ postfix_expression
 					$$->nextlist.clear();
 
 					// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
-					emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.size()), NULL), q, -1);
-
+					emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.back().size()), NULL), q, -1);
+					currArgs.pop_back();
+					//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 					//DOUBT size() or size()+1?
 
 				}
@@ -284,7 +290,7 @@ postfix_expression
 		else{
 			$$->is_error=1;
 		}
-		currArgs.clear(); 
+		
 	}
 	| postfix_expression '.' IDENTIFIER {
 		vector<data> attr;
@@ -417,6 +423,8 @@ postfix_expression
 	;
 
 
+
+
 argument_expression_list
 	: assignment_expression {
 		$$ = $1;
@@ -424,7 +432,7 @@ argument_expression_list
 		if(!$1->is_error){
 			//Semantic
 			$$->isInit = $1->isInit;
-			currArgs.push_back($1->type);
+			currArgs.back().push_back($1->type);
 			$$->type = "void";
 
 			//--3AC
@@ -448,7 +456,7 @@ argument_expression_list
 			string temp = argExp($1->type, $3->type, 2);
 
 			if($1->isInit && $3->isInit) $$->isInit=1;
-			currArgs.push_back($3->type);
+			currArgs.back().push_back($3->type);
 			$$->type = "void";
 
 			//--3AC
@@ -2694,7 +2702,7 @@ statement
 				type = ""; 
 				structName = "";
 				funcArgs.clear();
-				currArgs.clear();
+				currArgs.pop_back();
 	}
 	;
 
