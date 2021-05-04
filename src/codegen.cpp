@@ -586,7 +586,7 @@ void genCode(){
             else if(instr.op.first[0] == '+')    add_op(&instr);
             else if(instr.op.first == "=")   assign_op(&instr);
             else if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 'd'){
-                ended = 1;
+                // ended = 1;
                 end_basic_block();
                 code_file << "\txor eax, eax\n";
                 code_file << "\tleave\n";
@@ -599,7 +599,7 @@ void genCode(){
             else if(instr.op.first[0] == '/') div_op(&instr);
             else if(instr.op.first[0] == '%') mod_op(&instr);
             else if(instr.op.first == "RETURN"){
-                ended = 1;
+                // ended = 1;
                 return_op(&instr);
             }
             else if(instr.op.first == "param") params.push(instr.arg1);
@@ -621,7 +621,7 @@ void genCode(){
                 // print3AC_code();
                 
                 goto_op(&instr);
-                ended=1;
+                // ended=1;
             }
             
             
@@ -636,7 +636,7 @@ void genCode(){
 void end_basic_block(){
     for(auto reg = reg_desc.begin();reg!=reg_desc.end();reg++){
         for(auto sym =reg->second.begin() ;sym!=reg->second.end(); sym++){
-            if(sym->first[0] == '#' || is_integer(sym->first)) continue;
+            if( is_integer(sym->first)) continue;
             sym->second->addr_descriptor.reg = "";
             qid tem = *sym;
             code_file<<"\tmov " << get_mem_location(&tem, 0) <<", "<<reg->first<<"\n";
@@ -730,7 +730,7 @@ string get_mem_location(qid* sym, int flag){
 
 string getReg(qid* sym, qid* result, qid* sym2, int idx){
     // Allocates best register if available
-    freeDeadTemp(idx);
+    // freeDeadTemp(idx);
 
     // Case 1
     string reg = "";

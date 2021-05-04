@@ -35,7 +35,7 @@ extern map<sym_table*, sym_table*> parent_table;
 extern map<struct_sym_table*, struct_sym_table*> struct_parent_table;
 
 // extern map<string, int> struct_size;
-extern map<string, vector<string> > func_arg;
+extern map<string, pair<string,vector<string> > > func_arg;
 extern int struct_offset;
 extern sym_table* curr_table; //store pointer of the current symbol table
 extern sym_table* curr_structure;
@@ -71,7 +71,9 @@ void insertSymbol(sym_table& table, string id, string type, int size, bool is_in
 vector<string> getFuncArgs(string id);
 void updInit(string id);
 void updTableSize(string id);
-void insertFuncArg(string &func, vector<string> &arg);
+void insertFuncArg(string &func, vector<string> &arg, string &tp);
+string getFuncType(string id);
+string funcProtoLookup(string id);
 void printFuncArg();
 void printSymbolTable(sym_table* table, string file_name);
 int getSize(string id);

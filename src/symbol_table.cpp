@@ -6,7 +6,7 @@ map<sym_table*, sym_table*> parent_table;
 map<struct_sym_table*, struct_sym_table*> struct_parent_table;
 
 // map<string, int> struct_size;
-map<string, vector<string> > func_arg;
+map<string, pair< string,vector<string> > > func_arg;
 int struct_offset;
 sym_table* curr_table; //store pointer of the current symbol table
 sym_table* curr_structure;
@@ -119,6 +119,12 @@ sym_entry* lookup(string id){
 	return nullptr;
 }
 
+string funcProtoLookup(string id){
+	// cout<<"hello"<<endl;
+	if(func_arg.find(id)!= func_arg.end())return func_arg[id].first;
+	else return "";
+}
+
 int func_local_size(string name){
 	return gst[name]->size;
 	
@@ -143,9 +149,9 @@ void insertKeywords(){
 	// Insert imp functions
 	insertSymbol(*curr_table, "printf", "FUNC_int", 4, 0, nullptr);
 	vector<string> type = {"char*", "..."};
-	func_arg.insert({"printf", type});
+	func_arg.insert({"printf", make_pair("FUNC_int",type) });
 	insertSymbol(*curr_table, "scanf", "FUNC_int", 4, 0, nullptr);
-	func_arg.insert({"scanf", type});
+	func_arg.insert({"scanf", make_pair("FUNC_int",type)});
 }
 
 string getType(string id){
@@ -260,8 +266,15 @@ void clear_paramoffset(){
 vector<string> getFuncArgs(string id){
 	vector<string> temp;
 	temp.push_back("#NO_FUNC");
-	if(func_arg.find(id) != func_arg.end()) return func_arg[id];
+	if(func_arg.find(id) != func_arg.end()) return func_arg[id].second;
 	else return temp;
+}
+
+string getFuncType(string id){
+
+	if(func_arg.find(id) != func_arg.end()) return func_arg[id].first;
+	return "";
+
 }
 
 void updInit(string id){
@@ -274,8 +287,8 @@ void updTableSize(string id){
 	if(entry) entry->size = blockSz.top();
 }
 
-void insertFuncArg(string &func, vector<string> &arg){
-	func_arg.insert(make_pair(func, arg));
+void insertFuncArg(string &func, vector<string> &arg,string &tp){
+	func_arg.insert(make_pair(func, make_pair(string("FUNC_" +tp),arg)));
 }
 
 void insertType(string a, string b){
@@ -303,7 +316,7 @@ void printFuncArg(){
     for(auto it:func_arg){
 
     	string temp = "";
-    	for(auto h:it.second){
+    	for(auto h:it.second.second){
     		if(temp!="") temp += ", ";
     		temp+=h;
     	}

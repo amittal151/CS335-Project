@@ -7,7 +7,12 @@ string primaryExpression(string id) {
         string s = n->type;
         return s;     
     }
-    return "";
+    string temp = funcProtoLookup(id);
+    if(temp!=""){
+        temp += "#";
+    }
+    return temp; 
+    // return funcProtoLookup(id);// search function prototype declaration
 }
 string constantEx(int numType ){
     switch(numType){

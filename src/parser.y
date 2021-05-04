@@ -107,14 +107,24 @@ primary_expression
 			}
 			else $$->expType = 1;
 
-			$$->type = temp;
-			$$->isInit = lookup(string($1))->init;
-			$$->size = getSize(temp);
-			$$->temp_name = string($1); 
-			
-			//--3AC
-			$$->place = qid(string($1), lookup(string($1)));
-			$$->nextlist.clear();
+			if(temp.substr(0,5)=="FUNC_" && temp.back() == '#'){
+				temp.pop_back();
+				$$->type = temp;
+				$$->temp_name = string($1); 
+				$$->nextlist.clear();
+			}
+			else{
+
+				$$->type = temp;
+				$$->isInit = lookup(string($1))->init;
+				$$->size = getSize(temp);
+				$$->temp_name = string($1); 
+				
+				//--3AC
+				$$->place = qid(string($1), lookup(string($1)));
+				$$->nextlist.clear();
+
+			}
 		}
     }
 	| CONSTANT {
@@ -193,6 +203,11 @@ postfix_expression
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type,2);
 		currArgs.push_back(vector<string>() ); 
+
+		if(temp.empty()){
+			temp = getFuncType($1->temp_name);
+		}
+
 		if(!($1->is_error)){
 			if(!temp.empty()){	
 				$$->type = temp;
@@ -209,7 +224,7 @@ postfix_expression
 						$$->nextlist.clear();
 
 						// emit(qid("refParam", NULL), , NULL)qid("", qid("", NULL), q, -1);
-						emit(qid("CALL", NULL), $1->place, qid("1", NULL), q, -1);
+						emit(qid("CALL", NULL),qid($$->temp_name,NULL), qid("1", NULL), q, -1);
 						currArgs.pop_back();
 						//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 						$$->place = q;
@@ -235,6 +250,9 @@ postfix_expression
 		//Semantics
 		$$->isInit = $4->isInit;
 		string temp = postfixExpression($1->type,3);
+		if(temp.empty()){
+			temp = getFuncType($1->temp_name);
+		}
 
 		if(!($1->is_error || $4->is_error)){
 			if(!temp.empty()){	
@@ -242,8 +260,8 @@ postfix_expression
 				if($1->expType ==3){
 					vector<string> funcArgs = getFuncArgs($1->temp_name);
 					vector<string> tempArgs =currArgs.back();
-					for(int i=0;i<tempArgs.size();i++)cout<<tempArgs[i]<<", ";
-					cout<<"\n";
+					//for(int i=0;i<tempArgs.size();i++)cout<<tempArgs[i]<<", ";
+					//cout<<"\n";
 					for(int i=0;i<funcArgs.size();i++){
 						if(funcArgs[i]=="...")break;
 						if(tempArgs.size()==i){
@@ -275,7 +293,8 @@ postfix_expression
 					$$->nextlist.clear();
 
 					// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
-					emit(qid("CALL", NULL), $1->place, qid(to_string(currArgs.back().size()), NULL), q, -1);
+					//cout<<"----"<< $$->temp_name<<endl ;
+					emit(qid("CALL", NULL), qid($1->temp_name,NULL), qid(to_string(currArgs.back().size()), NULL), q, -1);
 					currArgs.pop_back();
 					//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 					//DOUBT size() or size()+1?
@@ -1495,7 +1514,8 @@ GOTO_OR
 
 conditional_expression
 	: logical_or_expression		{$$ = $1;}
-	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression WRITE_GOTO{
+	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
+
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -1521,16 +1541,18 @@ conditional_expression
 				code[$4-1].arg1 = $3->place;
 				code[$4-1].res = temp1;
 
-				code[$8-1].arg1 = $7->place;
-				code[$8-1].res = temp1;
+				//code[$8-1].arg1 = $7->place;
+				//code[$8-1].res = temp1;
 				
 				$$->nextlist = $3->nextlist;
 				// ????
+				emit(qid("=", lookup("=")), $7->place, qid("", NULL), temp1, -1);
 				$$->nextlist.insert($$->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
 				$$->nextlist.push_back($4);
-				$$->nextlist.push_back($8);
+				//$$->nextlist.push_back($8);
 
 				$$->place = temp1;
+
 			}
 			else {
 				yyerror("type mismatch in conditional expression");
@@ -2269,7 +2291,7 @@ direct_declarator
 
 				vector<string> temp = getFuncArgs($1->temp_name);
 				if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-					insertFuncArg($$->temp_name, funcArgs);
+					insertFuncArg($$->temp_name, funcArgs, $$->type);
 					funcArgs.clear();
 					funcName = string($1->temp_name);
 					funcType = $1->type;
@@ -2340,7 +2362,7 @@ direct_declarator
 					insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
 					args.push_back("int");
 				}
-				insertFuncArg($1->temp_name, args);
+				insertFuncArg($1->temp_name, args, $$->type);
 			}
 
 			if(args.size() == idList.size()) {
@@ -2384,7 +2406,7 @@ direct_declarator
 
 				vector<string> temp = getFuncArgs($1->temp_name);
 				if((temp.size() == 1 && temp[0] == "#NO_FUNC") || funcArgs == temp){
-					insertFuncArg($$->temp_name, funcArgs);
+					insertFuncArg($$->temp_name, funcArgs, $$->type);
 					funcArgs.clear();
 					funcName = string($1->temp_name);
 					funcType = $1->type;
@@ -3126,7 +3148,7 @@ jump_statement
 		if($2->is_error)	{
 			$$->is_error = 1;
 		}
-
+		backpatch($2->nextlist,code.size());
         emit(qid("RETURN", lookup("return")), $2->place, qid("", NULL), qid("", NULL), -1);
 	}
 	;
