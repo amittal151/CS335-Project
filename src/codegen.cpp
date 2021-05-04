@@ -4,9 +4,12 @@ map<string, set<qid> > reg_desc;
 map<int ,string> leaders; 
 stack<qid>  params; // stores the parameters as soon as we encounter first param
 map<int, string> stringlabels;
+map<int, int> pointed_by; 
+map<qid, int> addr_pointed_to;
 
 int string_counter = 0; 
 int label_counter = 0;
+
 set<string> exclude_this;
 
 qid empty_var("", NULL);
@@ -250,6 +253,16 @@ void assign_op(quad* instr){
         update_reg_desc(reg, &instr->res);        // since reg will still hold y's value, keep y in reg
         reg_desc[reg].insert(instr->arg1);
         instr->arg1.second->addr_descriptor.reg = reg;
+        
+        if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
+            pointed_by[addr_pointed_to[instr->arg1]] = 1;
+        }
+        if(pointed_by[instr->res.second->offset]){
+            string reg_stored = instr->res.second->addr_descriptor.reg;
+            instr->res.second->addr_descriptor.reg = "";
+            reg_desc[reg_stored].erase(instr->res);
+            code_file<<"\tmov "<<get_mem_location(&instr->res, 0)<<", "<<reg_stored<<"\n";
+        }
     }
 }
 
@@ -267,7 +280,9 @@ void gen_func_label(quad* instr){
     code_file << s << " :\n";
     code_file << "\tpush ebp\n";
     code_file << "\tmov ebp, esp\n"; 
-    code_file << "\tsub esp, "<<func_local_size(name)<<"\n";  // TODO
+    code_file << "\tsub esp, "<<func_local_size(name)<<"\n";
+
+    pointed_by.clear();
 }
 
 
@@ -282,7 +297,7 @@ void lshift_op(quad* instr){    // <<
     // else{
     free_reg("ecx");
     mem2 = get_mem_location(&instr->arg2, 0);
-    code_file << "\tmov " << "cl" << ", " << mem2 <<"\n";
+    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
     mem2 = "cl";
     // }
     
@@ -301,7 +316,7 @@ void rshift_op(quad* instr){    // >>
     // else{
     free_reg("ecx");
     mem2 = get_mem_location(&instr->arg2, 0);
-    code_file << "\tmov " << "cl" << ", " << mem2 <<"\n";
+    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
     mem2 = "cl";
     // }
     
@@ -324,8 +339,8 @@ void unary_op(quad* instr){
         if(op == "++P")      instruction = "inc";
         else if(op == "--P") instruction = "dec";
         code_file << "\t"<<instruction<< " "<<reg <<"\n";
-        // string mem = get_mem_location(&instr->arg1, -1);
-        // code_file << "\tmov " << mem << ", " <<  reg<<"\n";
+        string mem = get_mem_location(&instr->arg1, -1);
+        code_file << "\tmov " << mem << ", " <<  reg<<"\n";
         update_reg_desc(reg, &instr->res);
         
     }
@@ -337,8 +352,8 @@ void unary_op(quad* instr){
         if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
 
         code_file << "\t"<<instruction<< " "<<reg1 <<"\n";
-        // string mem = get_mem_location(&instr->arg1, -1);
-        // code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
+        string mem = get_mem_location(&instr->arg1, -1);
+        code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
     }
     else if(op =="~" ) {
         instruction = "not";
@@ -532,8 +547,17 @@ void pointer_op(quad* instr){
             // Give error
         }
         free_reg("eax");
+        if(instr->arg1.second->addr_descriptor.reg != ""){
+            string reg = instr->arg1.second->addr_descriptor.reg;
+            reg_desc[reg].erase(instr->arg1);
+            instr->arg1.second->addr_descriptor.reg = "";
+            code_file<<"\tmov "<<get_mem_location(&instr->arg1, 0)<<", "<<reg<<"\n";
+        }
         string mem = get_mem_location(&instr->arg1, 0);
+
         code_file<<"\tlea eax, "<<mem<<"\n";
+        pointed_by[instr->arg1.second->offset] = 0;
+        addr_pointed_to[instr->res] = instr->arg1.second->offset;
         update_reg_desc("eax", &instr->res);
     }
     else{
@@ -666,6 +690,7 @@ void end_basic_block(){
 void update_reg_desc(string reg, qid* sym){
     for(auto it = reg_desc[reg].begin();it != reg_desc[reg].end(); it++){
         it->second->addr_descriptor.reg = "";
+        qid temp = *it;
     }
     
     for(auto it = reg_desc.begin(); it != reg_desc.end(); it++){
