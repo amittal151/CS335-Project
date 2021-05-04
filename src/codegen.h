@@ -37,4 +37,6 @@ void bitwise_op(quad* instr);
 void unary_op(quad* instr);
 void pointer_op(quad* instr);
 void free_reg(string reg);
+void ptr_op(quad* instr);
+void member_access(quad* instr);
 void goto_op(quad* instr);

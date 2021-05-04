@@ -547,6 +547,21 @@ void pointer_op(quad* instr){
     }
 }
 
+void ptr_op(quad* instr){
+
+}
+
+void member_access(quad* instr){
+    if(!instr->arg1.second->is_derefer){
+        instr->res.second->offset = instr->arg2.second->offset;
+        // cout<<"offset "<<instr->res.second->offset<<"\n";
+        // string reg
+    }
+    else{
+        
+    }
+}
+
 void genCode(){
     // Prints final code to be generated in asm file
     findBasicBlocks();
@@ -623,6 +638,8 @@ void genCode(){
                 goto_op(&instr);
                 // ended=1;
             }
+            else if(instr.op.first == "PTR_OP") ptr_op(&instr);
+            else if(instr.op.first == "member_access") member_access(&instr);
             
             
         }

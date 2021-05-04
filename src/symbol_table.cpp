@@ -202,11 +202,12 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	}
 
 	sym_table* table = (*temp)[struct_name].second;
-	int struct_offset = lookup(struct_var)->offset;
+	sym_entry* struct_entry = lookup(struct_var);
 	sym_entry* t = new sym_entry;
 	t->type = ((*table)[id])->type;
 	t->size = ((*table)[id])->size;
-	t->offset = ((*table)[id])->offset + struct_offset;
+	t->offset = ((*table)[id])->offset + struct_entry->offset;
+	// cout<<id<<" "<<((*table)[id])->offset<<" "<<struct_entry->offset<<" "<<struct_entry->size<<"\n";
 	t->next_use = -1;
 	t->heap_mem = 0;
 	t->is_derefer = 0;

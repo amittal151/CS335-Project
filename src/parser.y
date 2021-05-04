@@ -241,7 +241,7 @@ postfix_expression
 		}
 		//currArgs.clear(); 
 	}
-	| postfix_expression  '(' { currArgs.push_back(vector<string>() ); } argument_expression_list ')' {
+	| postfix_expression  '(' { currArgs.push_back(vector<string>()); } argument_expression_list ')' {
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $4, "", 1);
@@ -331,10 +331,16 @@ postfix_expression
 				$$->is_error = 1;
 			}
 			else{
-				$$->type = StructAttrType($1->type,temp);
-				sym_entry* attr = retTypeAttrEntry($1->type, string($3), $1->temp_name);
+				$$->type = StructAttrType($1->type, temp);
 				$$->temp_name = $1->temp_name + "." + temp;
-				$$->place = qid(string($3), attr);
+				
+				qid temp_var = newtemp($$->type);
+				// $1->type.pop_back();
+				cout<<$1->type<<"\n";
+				sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
+				// attr_sym->offset -= lookup($1->temp_name)->offset;
+				emit(qid("member_access", NULL), $1->place, qid(string($3), attr_sym), temp_var, -1);
+				$$->place = temp_var;
 			}
 		}
 		else{
@@ -369,7 +375,15 @@ postfix_expression
 				}
 				else{
 					$$->type = StructAttrType(temp1, temp);
-					$$->temp_name = $1->temp_name + "->" + temp;
+					$$->temp_name = $1->temp_name + "." + temp;
+					
+					qid temp = newtemp($$->type);
+					$1->type.pop_back();
+					cout<<$1->type<<"\n";
+					sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
+					attr_sym->offset -= lookup($1->temp_name)->offset;
+					emit(qid("PTR_OP", NULL), $1->place, qid(string($3), attr_sym), temp, -1);
+					$$->place = temp;
 				}
 			}
 		}
