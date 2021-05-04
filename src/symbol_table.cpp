@@ -195,6 +195,27 @@ int printStructTable(string struct_name){
 	return 0;
 }
 
+sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
+	struct_sym_table* temp = curr_struct_table;
+	while((*temp).find(struct_name) == (*temp).end()){
+		temp = struct_parent_table[temp];
+	}
+
+	sym_table* table = (*temp)[struct_name].second;
+	int struct_offset = lookup(struct_var)->offset;
+	sym_entry* t = new sym_entry;
+	t->type = ((*table)[id])->type;
+	t->size = ((*table)[id])->size;
+	t->offset = ((*table)[id])->offset + struct_offset;
+	t->next_use = -1;
+	t->heap_mem = 0;
+	t->is_derefer = 0;
+
+	return t;
+}
+
+
+
 string StructAttrType(string struct_name, string id){
 	struct_sym_table* temp = curr_struct_table;
 	while((*temp).find(struct_name) == (*temp).end()){

@@ -82,3 +82,4 @@ void insertType(string a, string b);
 void clear_paramoffset();
 void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr);
 int func_local_size(string name); // returns bytes required for local variables in a function
+sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var);
