@@ -313,7 +313,9 @@ postfix_expression
 			}
 			else{
 				$$->type = StructAttrType($1->type,temp);
+				sym_entry* attr = retTypeAttrEntry($1->type, string($3), $1->temp_name);
 				$$->temp_name = $1->temp_name + "." + temp;
+				$$->place = qid(string($3), attr);
 			}
 		}
 		else{
@@ -551,6 +553,7 @@ unary_expression
 
 				//--3AC
 				qid q = newtemp(temp);
+				$$->temp_name = $2->temp_name;
 				$$->place = q;
 				$$->nextlist.clear();
 				emit($1->place, $2->place, qid("", NULL), q, -1);
