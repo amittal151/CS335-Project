@@ -21,8 +21,9 @@ typedef struct sym_entry{
 
 	int heap_mem = 0;
 	int next_use = -1;
-
 	int is_derefer = 0;
+
+	vector<int> array_dims;
 }sym_entry;
 
 typedef map<string, sym_entry* > sym_table; 

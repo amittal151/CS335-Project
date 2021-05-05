@@ -31,6 +31,7 @@ int Anon_StructCounter=0;
 vector<string> funcArgs;
 vector<string> idList;
 vector<vector<string> > currArgs(1,vector<string>() );
+vector<int> array_dims;
 
 int if_found = 0;
 map<string, vector<int>> gotolablelist;
@@ -172,15 +173,24 @@ postfix_expression
 		if($1->isInit && $3->isInit){
 			$$->isInit = 1;
 		}
+		// cout<<$3->intVal<<"\n";
 		string temp = postfixExpression($1->type,1);
 		if(!($1->is_error || $3->is_error)){
 			if(!temp.empty()){	
 				$$->type = temp;
 
 				//--3AC
-				$$->place = newtemp(temp);
-				if($3->place.second) $$->place.second->offset = $1->place.second->offset;
-				if($3->place.second) $$->place.second->size = $3->place.second->offset;
+				// $$->place = newtemp(temp);
+				// if($3->place.second) $$->place.second->offset = $1->place.second->offset;
+				// if($3->place.second) $$->place.second->size = $3->place.second->offset;
+
+				qid temp_var = newtemp($$->type);
+
+				emit(qid("[ ]", NULL), $1->place, $3->place, temp_var, -1);
+
+				temp_var.second->array_dims = $1->place.second->array_dims;
+				if(temp_var.second->array_dims.size()) temp_var.second->array_dims.erase(temp_var.second->array_dims.begin());
+				$$->place = temp_var;
 				
 				//TODO (is_init);
 
@@ -336,7 +346,7 @@ postfix_expression
 				
 				qid temp_var = newtemp($$->type);
 				// $1->type.pop_back();
-				cout<<$1->type<<"\n";
+				// cout<<$1->type<<"\n";
 				sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
 				// attr_sym->offset -= lookup($1->temp_name)->offset;
 				emit(qid("member_access", NULL), $1->place, qid(string($3), attr_sym), temp_var, -1);
@@ -379,7 +389,7 @@ postfix_expression
 					
 					qid temp = newtemp($$->type);
 					$1->type.pop_back();
-					cout<<$1->type<<"\n";
+					// cout<<$1->type<<"\n";
 					sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
 					attr_sym->offset -= lookup($1->temp_name)->offset;
 					emit(qid("PTR_OP", NULL), $1->place, qid(string($3), attr_sym), temp, -1);
@@ -738,10 +748,10 @@ multiplicative_expression
 
 			if(!temp.empty()){
 				if(temp == "int"){
-					$$->type = "long long" ;
+					$$->type = "int" ;
 
 					//--3AC
-					qid q = newtemp("long long");
+					qid q = newtemp("int");
 					$$->place = q;
 					$$->nextlist.clear();
 					emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
@@ -799,10 +809,10 @@ multiplicative_expression
 			string temp =mulExp($1->type,$3->type,'/');
 			if(!temp.empty()){
 				if(temp == "int"){
-					$$->type = "long long" ;
+					$$->type = "int" ;
 
 					//--3AC
-					qid q = newtemp("long long");
+					qid q = newtemp("int");
 					$$->place = q;
 					$$->nextlist.clear();
 					emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
@@ -855,10 +865,10 @@ multiplicative_expression
 			if($3->intVal!=0)$$->intVal = $1->intVal % $3->intVal;
 			string temp =mulExp($1->type,$3->type,'%');
 			if(temp == "int"){
-				$$->type = "long long" ;
+				$$->type = "int" ;
 
 				//--3AC
-				qid q = newtemp("long long");
+				qid q = newtemp("int");
 				$$->place = q;
 				$$->nextlist.clear();
 				emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
@@ -894,7 +904,7 @@ additive_expression
 		
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
-				if(temp == "int")	$$->type = "long long";
+				if(temp == "int")	$$->type = "int";
 				else if(temp == "real")	$$->type = "long double";
 				else $$->type =  temp;
 
@@ -946,7 +956,7 @@ additive_expression
 		string temp = addExp($1->type,$3->type,'-');
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
-				if(temp == "int")$$->type = "long long";
+				if(temp == "int")$$->type = "int";
 				else if(temp == "real")$$->type = "long double";
 				else $$->type = temp;
 
@@ -1316,7 +1326,7 @@ and_expression
 				if(temp =="ok"){
 					$$->type = "int";
 				}
-				else $$->type = "long long";
+				else $$->type = "int";
 				
 				$$->intVal = $1->intVal & $3->intVal;
 
@@ -1354,7 +1364,7 @@ exclusive_or_expression
 				if(temp =="ok"){
 					$$->type = "int";
 				}
-				else $$->type = "long long";
+				else $$->type = "int";
 
 				$$->intVal = $1->intVal ^ $3->intVal;
 
@@ -1395,7 +1405,7 @@ inclusive_or_expression
 				if(temp =="ok"){
 					$$->type = "int";
 				}
-				else $$->type = "long long";
+				else $$->type = "int";
 				
 				$$->intVal = $1->intVal | $3->intVal;
 
@@ -2257,6 +2267,7 @@ direct_declarator
 
 				//3AC
 				$$->place = qid($$->temp_name, NULL);
+				array_dims.push_back($3->intVal);
 			}
 			else {
 				yyerror(( $1->temp_name + " declared as function returning an array").c_str());

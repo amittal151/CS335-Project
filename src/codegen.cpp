@@ -169,6 +169,7 @@ void clear_regs(){
 // eg for div we need eax, edx
 void free_reg(string reg){
     for(auto sym: reg_desc[reg]){
+        if(is_integer(sym.first)) continue;
         sym.second->addr_descriptor.reg = "";
         code_file<<"\tmov "<<get_mem_location(&sym, 1)<<", "<<reg<<"\n";
     }
@@ -238,7 +239,7 @@ void assign_op(quad* instr){
             res_mem = getReg(&instr->res, &empty_var, &empty_var, -1);
             res_mem = "[ " + res_mem + " ]";
         }
-        string arg1_mem = get_mem_location(&instr->arg1, 1);
+        string arg1_mem = getReg(&instr->arg1, &empty_var, &empty_var, -1);
         code_file<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
     }
     // x = 1
@@ -586,6 +587,81 @@ void member_access(quad* instr){
     }
 }
 
+void array_op(quad* instr){
+    // string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+    // code_file<<"\tmov ";
+    // if( instr->arg1.second->array_dims.size() == 0){
+        // if(is_integer(instr->arg2.first)){
+        if(instr->arg1.second->array_dims.size() == 0){
+            string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+
+            string mem = get_mem_location(&instr->arg1, -1);
+            
+            if(instr->arg1.first[0] != '#') code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
+            else code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
+            
+            string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
+            code_file<<"\timul "<<reg1<<", "<<4<<"\n";
+            code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
+            instr->res.second->is_derefer = 1;
+
+            reg_desc[reg1].erase(instr->arg2);
+            instr->arg2.second->addr_descriptor.reg = "";
+            // free_reg(reg1);
+            // Do  not touch this shit else it will break the whole shit
+            update_reg_desc(reg, &instr->res);
+        }
+        else{
+            // if(instr->arg1.first[0] == '#'){
+                
+            string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+
+            string mem = get_mem_location(&instr->arg1, -1);
+            
+            if(instr->arg1.first[0] != '#') code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
+            else code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
+            
+            string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
+            code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
+            code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
+            
+            // instr->res.second->is_derefer = 1;
+            // free_reg(reg1);
+            reg_desc[reg1].erase(instr->arg2);
+            instr->arg2.second->addr_descriptor.reg = "";
+            
+            // code_file<<"\tmov "<<get_mem_location(&instr->res, -1)<<", "<<reg<<"\n";
+            update_reg_desc(reg, &instr->res);
+            
+        }
+        // }
+        // else{ 
+            // string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+            // string mem = get_mem_location(&instr->arg1, -1);
+            // code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
+
+            // string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, -1);
+
+            // if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+
+            // code_file << "\timul " << reg1 << ", " << 4 <<endl;
+
+            // free_reg(reg1);
+
+
+
+        //     exclude_this.clear();
+        // }
+        
+        
+        // code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
+    // }
+    // else{
+
+    // }
+    // instr->res.second->offset
+}
+
 void genCode(){
     // Prints final code to be generated in asm file
     findBasicBlocks();
@@ -664,6 +740,7 @@ void genCode(){
             }
             else if(instr.op.first == "PTR_OP") ptr_op(&instr);
             else if(instr.op.first == "member_access") member_access(&instr);
+            else if(instr.op.first == "[ ]") array_op(&instr);
             
             
         }

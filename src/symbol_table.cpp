@@ -21,6 +21,7 @@ int param_offset = -4; // parameter offset for a func
 
 int struct_count = 1;
 int avl=0;
+extern vector<int> array_dims;
 
 int blockCnt = 1;
 
@@ -271,6 +272,21 @@ void createParamList(){
 
 void insertSymbol(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	table.insert(make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr)));
+	if(type[type.length()-1] == '*' && !array_dims.empty()){
+		vector<int> temp;
+		int curr = 1;
+		for(int i = array_dims.size()-1; i>=1; i--){
+			curr*=array_dims[i];
+			temp.push_back(curr);
+		}
+		reverse(temp.begin(), temp.end());
+		table[id]->array_dims = temp;
+		for(int x: temp){
+			cout<<x<<" ";
+		}
+		cout<<"\n";
+		array_dims.clear();
+	}
 	blockSz.top()+=size;
 	Goffset.top()+=size;
 }
