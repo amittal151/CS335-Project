@@ -195,6 +195,11 @@ int check_type()
 /*
 *	it actually will only return IDENTIFIER
 */
+	sym_entry* find_it = lookup(string(yytext));
+	if(find_it){
+		if(find_it->storage_class == "typedef") return TYPE_NAME;
+		else return IDENTIFIER;
+	}
 
 	return(IDENTIFIER);
 }

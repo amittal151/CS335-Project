@@ -556,7 +556,8 @@ void pointer_op(quad* instr){
         }
         string mem = get_mem_location(&instr->arg1, 0);
 
-        code_file<<"\tlea eax, "<<mem<<"\n";
+        if(!instr->arg1.second->is_derefer) code_file<<"\tlea eax, "<<mem<<"\n";
+        else code_file<<"\tmov eax, "<<mem<<"\n";
         pointed_by[instr->arg1.second->offset] = 0;
         addr_pointed_to[instr->res] = instr->arg1.second->offset;
         update_reg_desc("eax", &instr->res);
@@ -564,8 +565,11 @@ void pointer_op(quad* instr){
     else{
         // #v0 = *a
         free_reg("eax");
-        string mem = get_mem_location(&instr->arg1, 0);
+        string mem ;
+        if(instr->arg1.second->type[instr->arg1.second->type.length()-1] == '*') mem = get_mem_location(&instr->arg1, -2);
+        else mem = get_mem_location(&instr->arg1, 0);
         // if(reg_desc.find(mem) != reg_desc.end()) mem = "[ " + mem + " ]";
+        code_file<<"PATA NHI KYA HOGA HAMAR :(\n";
         code_file<<"\tmov eax, "<<mem<<"\n";
         update_reg_desc("eax", &instr->res);
         instr->res.second->is_derefer = 1;
@@ -588,78 +592,63 @@ void member_access(quad* instr){
 }
 
 void array_op(quad* instr){
-    // string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
-    // code_file<<"\tmov ";
-    // if( instr->arg1.second->array_dims.size() == 0){
-        // if(is_integer(instr->arg2.first)){
-        if(instr->arg1.second->array_dims.size() == 0){
-            string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
-
-            string mem = get_mem_location(&instr->arg1, -1);
-            
-            if(instr->arg1.first[0] != '#') code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
-            else code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
-            
-            string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
-            code_file<<"\timul "<<reg1<<", "<<4<<"\n";
-            code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
-            instr->res.second->is_derefer = 1;
-
-            reg_desc[reg1].erase(instr->arg2);
-            instr->arg2.second->addr_descriptor.reg = "";
-            // free_reg(reg1);
-            // Do  not touch this shit else it will break the whole shit
-            update_reg_desc(reg, &instr->res);
+    // if(instr->arg1.second->array_dims.size() == 0){
+        string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+        string mem;
+        
+        if(instr->arg1.first[0] != '#') {
+            mem = get_mem_location(&instr->arg1, -1);
+            code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
         }
-        else{
-            // if(instr->arg1.first[0] == '#'){
-                
-            string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
-
-            string mem = get_mem_location(&instr->arg1, -1);
-            
-            if(instr->arg1.first[0] != '#') code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
-            else code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
-            
-            string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
-            code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
-            code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
-            
-            // instr->res.second->is_derefer = 1;
-            // free_reg(reg1);
-            reg_desc[reg1].erase(instr->arg2);
-            instr->arg2.second->addr_descriptor.reg = "";
-            
-            // code_file<<"\tmov "<<get_mem_location(&instr->res, -1)<<", "<<reg<<"\n";
-            update_reg_desc(reg, &instr->res);
-            
+        else {
+            mem = get_mem_location(&instr->arg1, 0);
+            code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
         }
-        // }
-        // else{ 
-            // string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
-            // string mem = get_mem_location(&instr->arg1, -1);
-            // code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
+        exclude_this.insert(reg);
+        string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
+        
+        if(instr->arg1.second->array_dims.empty()) code_file<<"\timul "<<reg1<<", "<<4<<"\n";
+        else code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
+       
+        code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
+        if(instr->arg1.second->array_dims.empty()) instr->res.second->is_derefer = 1;
 
-            // string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, -1);
-
-            // if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
-
-            // code_file << "\timul " << reg1 << ", " << 4 <<endl;
-
-            // free_reg(reg1);
-
-
-
-        //     exclude_this.clear();
-        // }
+        exclude_this.clear();
+        reg_desc[reg1].erase(instr->arg2);
+        instr->arg2.second->addr_descriptor.reg = "";
+        
+        // Do  not touch this shit else it will break the whole shit
+        update_reg_desc(reg, &instr->res);
+        
+    // }
+    // else{                
+    //     // allocate register to result first (only first time)
+    //     string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
+    //     string mem;
+        
+    //     // Store address of Array name into a register for the first indexing
+    //     // Later, we need to mov the offsetted memory into register only!
+    //     if(instr->arg1.first[0] != '#') {
+    //         mem = get_mem_location(&instr->arg1, -1);
+    //         code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
+    //     }
+    //     else {
+    //         mem = get_mem_location(&instr->arg1, 0);
+    //         code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
+    //     }
+    //     exclude_this.insert(reg);
+    //     string reg1 = getReg(&instr->arg2, &empty_var, &empty_var, instr->idx);
+    //     code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
+    //     code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
         
         
-        // code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
+    //     exclude_this.clear();
+    //     reg_desc[reg1].erase(instr->arg2);
+    //     instr->arg2.second->addr_descriptor.reg = "";
+        
+    //     update_reg_desc(reg, &instr->res);
+        
     // }
-    // else{
-
-    // }
-    // instr->res.second->offset
 }
 
 void genCode(){
@@ -821,7 +810,7 @@ string get_mem_location(qid* sym, int flag){
     }
 
     if(sym->second->addr_descriptor.reg != "" && flag!=-1){
-        if(!sym->second->is_derefer) return sym->second->addr_descriptor.reg;
+        if(!sym->second->is_derefer || flag == -2) return sym->second->addr_descriptor.reg;
         else return "[ " + sym->second->addr_descriptor.reg + " ]";
     }
 
@@ -876,20 +865,7 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     } 
     assert(reg != "");
 
-    for (auto r : reg_desc[reg]){
-        // Case 3 : 
-        qid q = r;
-        if(q.second->addr_descriptor.stack || q.second->addr_descriptor.heap){
-            q.second->addr_descriptor.reg = "";
-        }
-        else{
-            // Reg Spill and store in memory
-            q.second->addr_descriptor.reg = "";
-            code_file << "\tmov " << get_mem_location(&q, 1) << ", " << reg <<endl;
-        }
-        
-    }
-    reg_desc[reg].clear();
+    free_reg(reg);
 
     code_file << "\tmov " << reg << ", "<< get_mem_location(sym, 1) <<endl;
     sym->second->addr_descriptor.reg = reg;

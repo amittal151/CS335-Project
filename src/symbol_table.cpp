@@ -291,9 +291,32 @@ void insertSymbol(sym_table& table, string id, string type, int size, bool is_in
 	Goffset.top()+=size;
 }
 
+void insertTypedef(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
+	table.insert(make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr)));
+	if(type[type.length()-1] == '*' && !array_dims.empty()){
+		vector<int> temp;
+		int curr = 1;
+		for(int i = array_dims.size()-1; i>=1; i--){
+			curr*=array_dims[i];
+			temp.push_back(curr);
+		}
+		reverse(temp.begin(), temp.end());
+		table[id]->array_dims = temp;
+		for(int x: temp){
+			cout<<x<<" ";
+		}
+		cout<<"\n";
+		array_dims.clear();
+	}
+	table[id]->storage_class = "typedef";
+	blockSz.top()+=size;
+	Goffset.top()+=size;
+}
+
 void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	cout<<id<<" "<<param_offset-size<<"\n";
 	table.insert(make_pair(id, createEntry(type, size, is_init, param_offset-size, ptr)));
+	if(type[type.length()-1] == '*' && !array_dims.empty()) array_dims.clear();
 	param_offset-=size;
 }
 

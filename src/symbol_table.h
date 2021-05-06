@@ -24,6 +24,7 @@ typedef struct sym_entry{
 	int is_derefer = 0;
 
 	vector<int> array_dims;
+	string storage_class;
 }sym_entry;
 
 typedef map<string, sym_entry* > sym_table; 
@@ -69,6 +70,7 @@ int currTypeLookup(string struct_name);
 int findTypeAttr(string , string );
 void createParamList();
 void insertSymbol(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr);
+void insertTypedef(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr);
 vector<string> getFuncArgs(string id);
 void updInit(string id);
 void updTableSize(string id);

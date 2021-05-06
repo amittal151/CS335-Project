@@ -36,6 +36,8 @@ vector<int> array_dims;
 int if_found = 0;
 map<string, vector<int>> gotolablelist;
 map<string, int> gotolabel;
+string storage_class = "";
+int stop_compiler = 0;
 
 
 extern int yylex();
@@ -1705,7 +1707,7 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'						{ $$ = $1;  type = "";}
+	: declaration_specifiers ';'						{ $$ = $1;  type = ""; storage_class = "";}
 	| declaration_specifiers init_declarator_list ';'	{	
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
@@ -1713,6 +1715,7 @@ declaration
 															$$ = makenode("declaration",attr);
 
 															type = "";
+															storage_class = "";
 															// if($2->expType == 3){
 															// 	// Clear the Symbol table of Function;
 															// 	// But which function? We need func_name?
@@ -1802,8 +1805,14 @@ init_declarator
 				code.pop_back();
 			}
 			else{
-				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
-				$$->place = qid($1->temp_name, lookup($1->temp_name));
+				if(storage_class != "typedef"){
+					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+					$$->place = qid($1->temp_name, lookup($1->temp_name));
+				}
+				else{
+					insertTypedef(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+					$$->place = qid($1->temp_name, lookup($1->temp_name));
+				} 
 			}
 		}
 		else $$->is_error = 1;
@@ -1845,8 +1854,9 @@ init_declarator
 storage_class_specifier
 	: TYPEDEF	{
 		$$ = makeleaf($1);
-		yyerror("Not Implemented TYPEDEF yet!");
-		$$->is_error = 1;
+		// yyerror("Not Implemented TYPEDEF yet!");
+		// $$->is_error = 1;
+		storage_class = "typedef";
 	}
 	| EXTERN	{
 		$$ = makeleaf($1);
@@ -1953,7 +1963,8 @@ type_specifier
 	| TYPE_NAME		{
 		$$ = makeleaf($1);
 		string temp = getType($1);
-		type = temp;
+		if(type == "") type = temp;
+		else type += " " + temp;
 	}	
 	;
 
@@ -2202,13 +2213,15 @@ declarator
 		if(type == "#INSIDE"){
 			$$->type = structName + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 4;	// BONJOUR
+			if($2->expType != 2) $$->size = 4;	// BONJOUR
+			else $$->size = $2->size;
 			$$->expType = 2;
 		}
 		else{
 			$$->type = $2->type + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 4;	// BONJOUR
+			if($2->expType != 2) $$->size = 4;	// BONJOUR
+			else $$->size = $2->size;
 			$$->expType = 2;
 		}
 
@@ -2752,7 +2765,8 @@ statement
 				type = ""; 
 				structName = "";
 				funcArgs.clear();
-				currArgs.pop_back();
+				currArgs.clear();
+				currArgs.push_back(vector<string>());
 	}
 	;
 
@@ -3379,6 +3393,8 @@ void no_file_present(){
 
 int yyerror(const char* s) { 
 	
+	stop_compiler = 1;
+
 	FILE *dupfile = fopen(curr_file, "r");
 	int count = 1;
 	char currline[256]; /* or other suitable maximum line size */
@@ -3538,8 +3554,6 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
-		code_file.open("gen_code.asm");
-		
 		
 		// if(last[0] != ';' && last[0] != '}' ){
 		// 	print_error();
@@ -3548,18 +3562,26 @@ int main(int argc, char* argv[]){
 		
 	}
 
-	for(auto i: gotolablelist){
-		if(gotolabel.find(i.first) == gotolabel.end()){
-			yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+	
+
+	if(!stop_compiler){
+		
+		for(auto i: gotolablelist){
+			if(gotolabel.find(i.first) == gotolabel.end()){
+				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+			}
+			else backpatch(i.second, gotolabel[i.first]);
 		}
-		else backpatch(i.second, gotolabel[i.first]);
+
+		code_file.open("gen_code.asm");
+
+		print3AC_code();
+		genCode();
+		endAST();
+		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
 	}
 
-	print3AC_code();
-	genCode();
-	endAST();
-
-	printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
+	
 	return 0;
 }
 
