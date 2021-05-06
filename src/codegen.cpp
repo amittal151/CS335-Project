@@ -569,7 +569,7 @@ void pointer_op(quad* instr){
         if(instr->arg1.second->type[instr->arg1.second->type.length()-1] == '*') mem = get_mem_location(&instr->arg1, -2);
         else mem = get_mem_location(&instr->arg1, 0);
         // if(reg_desc.find(mem) != reg_desc.end()) mem = "[ " + mem + " ]";
-        code_file<<"PATA NHI KYA HOGA HAMAR :(\n";
+        // code_file<<"PATA NHI KYA HOGA HAMAR :(\n";
         code_file<<"\tmov eax, "<<mem<<"\n";
         update_reg_desc("eax", &instr->res);
         instr->res.second->is_derefer = 1;
