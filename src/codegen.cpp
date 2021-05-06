@@ -48,7 +48,10 @@ void add_op(quad* instr){
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
         // arg1 -> reg1
-        if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+        int val = instr->arg1.second->is_derefer;
+        while(val--){
+            code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+        }
 
         string mem2 = get_mem_location(&instr->arg2, 0);
         code_file << "\tadd " << reg1 << ", " << mem2 <<endl;
@@ -566,13 +569,16 @@ void pointer_op(quad* instr){
         // #v0 = *a
         free_reg("eax");
         string mem ;
-        if(instr->arg1.second->type[instr->arg1.second->type.length()-1] == '*') mem = get_mem_location(&instr->arg1, -2);
-        else mem = get_mem_location(&instr->arg1, 0);
+        mem = get_mem_location(&instr->arg1, 0);  
+        
+        // if(instr->arg1.second->type[instr->arg1.second->type.length()-1] == '*') mem = get_mem_location(&instr->arg1, -2);
+        // else mem = get_mem_location(&instr->arg1, 0);
+
         // if(reg_desc.find(mem) != reg_desc.end()) mem = "[ " + mem + " ]";
         // code_file<<"PATA NHI KYA HOGA HAMAR :(\n";
         code_file<<"\tmov eax, "<<mem<<"\n";
         update_reg_desc("eax", &instr->res);
-        instr->res.second->is_derefer = 1;
+        instr->res.second->is_derefer = instr->arg1.second->is_derefer + 1;
     }
 }
 
@@ -596,7 +602,7 @@ void array_op(quad* instr){
         string reg = getReg(&instr->res, &instr->arg2, &empty_var, instr->idx);
         string mem;
         
-        if(instr->arg1.first[0] != '#') {
+        if(instr->arg1.first[0] != '#') {    //First index    
             mem = get_mem_location(&instr->arg1, -1);
             code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
         }
