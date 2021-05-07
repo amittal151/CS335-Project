@@ -160,7 +160,7 @@ void set_int_type(int t){
 	// 3-> Hexa, 2-> Octal, 1-> decimal, 0-> Char
 	yylval.num = new constants ;
 	yylval.num->str = strdup(yytext);
-	yylval.num->type = string("long long");
+	yylval.num->type = string("int");
 	switch(t){
 		case 0 : {
 			sscanf(yytext, "%d", &(yylval.num->intVal));
@@ -184,7 +184,7 @@ void set_int_type(int t){
 void set_real_type(){
 	yylval.num = new constants ;
 	yylval.num->str = strdup(yytext);
-	yylval.num->type = string("long double");
+	yylval.num->type = string("float");
 	sscanf(yytext, "%lf", &(yylval.num->realVal));
 }
 

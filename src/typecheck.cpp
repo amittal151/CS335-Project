@@ -51,8 +51,7 @@ string postfixExpression(string type_name, int rule_num) {
         }
         default : return "";
         
-    }
-    
+    }   
 }
 
 string checkType(string a, string b){
@@ -86,7 +85,7 @@ string unaryExp(string op, string type){
     else if(op=="~"){
         if(!(isInt(type) || type != "bool")) return "";
     }
-    else if(op=="!" && type!="bool") return "";
+    else if(op=="!" && !(isInt(type) || type != "bool")) return "";
     return type;
 }
 
@@ -161,13 +160,13 @@ string assignExp(string a, string b, string op){
 
 string condExp(string a,string b){
     if(a == b)return a;
-    if(a == "char"|| isInt(a)) a = "long double";
-    if(b == "char"|| isInt(b)) b = "long double";
-    if(isFloat(a) && isFloat(b)) return "long double";
+    if(a == "char"|| isInt(a)) a = "float";
+    if(b == "char"|| isInt(b)) b = "float";
+    if(isFloat(a) && isFloat(b)) return "int";
     if(a.back() == '*' && b.back() == '*')return "void*" ;
     return "";
-
 }
+
 int isInt(string type1){
    if(type1=="int") return 1;
    if(type1=="bool")return 1;
@@ -213,30 +212,3 @@ bool isVoid(string type){
     else if(type.substr(0,4) == "void") return 1;
     else return 0;
 }
-
-// bool isSignedInt (string type){
-//    if(type=="int") return 1;
-//    if(type=="long") return 1;
-//    if(type=="long long") return 1;
-//    if(type=="long int") return 1;
-//    if(type=="long long int") return 1;
-//    if(type=="signed int") return 1;
-//    if(type=="signed long") return 1;
-//    if(type=="signed long long") return 1;
-//    if(type=="signed long int") return 1;
-//    if(type=="signed long long int") return 1;
-//    if(type=="short") return 1;
-//    if(type=="short int") return 1;
-//    if(type=="signed short") return 1;
-//    if(type=="signed short int") return 1;
-//    return 0;
-// }
-// bool isSignedFloat (string type){
-//    if(type=="float") return 1;
-//    if(type=="double") return 1;
-//    if(type=="long double") return 1;
-//    if(type=="signed float") return 1;
-//    if(type=="signed double") return 1;
-//    if(type=="signed long double") return 1;
-//    return 0;
-// }

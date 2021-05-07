@@ -177,7 +177,7 @@ postfix_expression
 		}
 		// cout<<$3->intVal<<"\n";
 		string temp = postfixExpression($1->type,1);
-		if(!($1->is_error || $3->is_error)){
+		if(!($1->is_error || $3->is_error) && $1->expType!=4){
 			if(!temp.empty()){	
 				$$->type = temp;
 
@@ -205,6 +205,9 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
 			$$->is_error=1;
 		}
 	}
@@ -220,7 +223,7 @@ postfix_expression
 			temp = getFuncType($1->temp_name);
 		}
 
-		if(!($1->is_error)){
+		if(!($1->is_error) && $1->expType!=4){
 			if(!temp.empty()){	
 				$$->type = temp;
 				if($1->expType == 3){
@@ -249,6 +252,9 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
 			$$->is_error=1;
 		}
 		//currArgs.clear(); 
@@ -266,7 +272,7 @@ postfix_expression
 			temp = getFuncType($1->temp_name);
 		}
 
-		if(!($1->is_error || $4->is_error)){
+		if(!($1->is_error || $4->is_error) && $1->expType!=4){
 			if(!temp.empty()){	
 				$$->type = temp;
 				if($1->expType ==3){
@@ -314,11 +320,15 @@ postfix_expression
 				}
 			}
 			else{
+
 				yyerror("Invalid function call");
 				$$->is_error=1;
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
 			$$->is_error=1;
 		}
 		
@@ -331,7 +341,7 @@ postfix_expression
 
 		//Semantics
 
-		if(!$1->is_error){
+		if(!$1->is_error && $1->expType!=4){
 			string temp = string($3);
 			int ret = findTypeAttr($1->type,temp);
 			if(ret == -1){
@@ -356,6 +366,9 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
 			$$->is_error = 1;
 		}
 	}
@@ -366,7 +379,7 @@ postfix_expression
 		$$ = makenode($2, attr);
 
 		//Semantics
-		if(!$1->is_error){
+		if(!$1->is_error && $1->expType!=4){
 			string temp = string($3);
 			string temp1 = ($1->type);
 			if(temp1.back() != '*'){
@@ -400,6 +413,10 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error=1;
 		}
 
@@ -411,7 +428,7 @@ postfix_expression
 
 		//Semantics
 		$$->isInit = $1->isInit;
-		if(!$1->is_error){
+		if(!$1->is_error && $1->expType!=4){
 			string temp = postfixExpression($1->type,6);
 			if(!temp.empty()){
 				$$->type = temp;
@@ -432,6 +449,10 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 
@@ -442,7 +463,7 @@ postfix_expression
 		$$ = makenode($2, attr);
 
 		//Semantics
-		if(!$1->is_error){
+		if(!$1->is_error && $1->expType!=4){
 			$$->isInit = $1->isInit;
 			string temp = postfixExpression($1->type,7);
 			if(!temp.empty()){
@@ -464,6 +485,10 @@ postfix_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 	}
@@ -529,9 +554,10 @@ unary_expression
 		$$ = makenode($1,attr);
 
 		//Semantic
-		if(!$2->is_error){
+		if(!$2->is_error && $2->expType!=4){
 			$$->isInit = $2->isInit;
 			string temp = postfixExpression($2->type,6);
+			
 			if(!temp.empty()){
 				$$->type = temp;
 				$$->intVal = $2->intVal +1;
@@ -550,6 +576,10 @@ unary_expression
 			}
 		}
 		else{
+			if($2->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 	}
@@ -559,7 +589,7 @@ unary_expression
 		$$ = makenode($1,attr);
 
 		//Semantic
-		if(!$2->is_error){
+		if(!$2->is_error && $2->expType!=4){
 			$$->isInit = $2->isInit;
 			string temp = postfixExpression($2->type,7);
 			if(!temp.empty()){
@@ -579,6 +609,10 @@ unary_expression
 			}
 		}
 		else{
+			if($2->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 	}
@@ -589,7 +623,7 @@ unary_expression
 		$$ = makenode("unary_exp",attr);
 
 		//Semantic
-		if(!($1->is_error || $2->is_error)){
+		if(!($1->is_error || $2->is_error) && $2->expType!=4){
 			$$->isInit = $2->isInit;
 			string temp = unaryExp($1->node_name,$2->type);
 			if(!temp.empty()){
@@ -611,6 +645,9 @@ unary_expression
 			}
 		}
 		else{
+			if($2->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
 			$$->is_error = 1;
 		}
 	}
@@ -619,7 +656,7 @@ unary_expression
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
 
-		if(!$2->is_error){
+		if(!$2->is_error && $2->expType!=4){
 			//Semantic
 			$$->type = "int";
 			$$->isInit =1;
@@ -632,6 +669,10 @@ unary_expression
 			emit(qid("SIZEOF", lookup("sizeof")), $2->place, qid("", NULL), q, -1);
 		}
 		else{
+			if($2->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 
@@ -641,7 +682,7 @@ unary_expression
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
 
-		if(!$3->is_error){
+		if(!$3->is_error && $3->expType!=4){
 			//Semantic
 			$$->type = "int";
 			$$->isInit =1;
@@ -654,6 +695,10 @@ unary_expression
 			emit(qid("SIZEOF", lookup("sizeof")), $3->place, qid("", NULL), q, -1);
 		}
 		else{
+			if($3->expType==4){
+				yyerror("constant expression cannot be used as lvalue");
+			}
+
 			$$->is_error = 1;
 		}
 	}
@@ -759,11 +804,11 @@ multiplicative_expression
 					emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
 				}
 				else if(temp == "float"){
-					$$->type = "long double";
+					$$->type = "float";
 
 					//--3AC
 
-					qid q = newtemp("long double");
+					qid q = newtemp("float");
 					$$->place = q;
 					$$->nextlist.clear();
 
@@ -820,11 +865,11 @@ multiplicative_expression
 					emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
 				}
 				else if(temp == "float"){
-					$$->type = "long double";
+					$$->type = "float";
 
 					//--3AC
 
-					qid q = newtemp("long double");
+					qid q = newtemp("float");
 					$$->place = q;
 					$$->nextlist.clear();
 
@@ -907,7 +952,7 @@ additive_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "int")	$$->type = "int";
-				else if(temp == "real")	$$->type = "long double";
+				else if(temp == "real")	$$->type = "float";
 				else $$->type =  temp;
 
 				$$->intVal = $1->intVal + $3->intVal;
@@ -959,7 +1004,7 @@ additive_expression
 		if(!$1->is_error && !$3->is_error){
 			if(!temp.empty()){
 				if(temp == "int")$$->type = "int";
-				else if(temp == "real")$$->type = "long double";
+				else if(temp == "real")$$->type = "float";
 				else $$->type = temp;
 
 				$$->intVal = $1->intVal - $3->intVal;
@@ -1629,7 +1674,7 @@ assignment_expression
 		//Semantics
 		string temp = assignExp($1->type,$4->type,string($2));
 
-		if(!$1->is_error && !$4->is_error){
+		if(!$1->is_error && !$4->is_error && $1->expType!=4){
 			if(!temp.empty()){
 				if(temp =="ok"){
 					$$->type = $1->type;
@@ -1654,6 +1699,9 @@ assignment_expression
 			}
 		}
 		else{
+			if($1->expType==4){
+				yyerror("Left operand in assignment operation cannot be a constant expression");
+			}
 			$$->is_error = 1;
 		}
 	}
