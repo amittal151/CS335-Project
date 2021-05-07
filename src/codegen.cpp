@@ -23,6 +23,7 @@ string get_label(){
 
 void gen_data_section(){
     code_file << "extern printf\n";
+    code_file << "extern scanf\n";
 }
 
 void starting_code(){
@@ -237,11 +238,15 @@ void assign_op(quad* instr){
     // *x = something
     if(instr->res.second->is_derefer){
         string res_mem;
-        if(instr->res.second->addr_descriptor.reg != "") res_mem = get_mem_location(&instr->res, 0);
-        else{
-            res_mem = getReg(&instr->res, &empty_var, &empty_var, -1);
-            res_mem = "[ " + res_mem + " ]";
+        // if(instr->res.second->addr_descriptor.reg != "") res_mem = get_mem_location(&instr->res, 0);
+        // else{
+        res_mem = getReg(&instr->res, &empty_var, &empty_var, -1);
+        
+        while(--instr->res.second->is_derefer > 0){
+            code_file<<"\tmov "<<res_mem<<", [ "<<res_mem<<" ]\n";
         }
+        res_mem = "[ " + res_mem + " ]";
+        
         string arg1_mem = getReg(&instr->arg1, &empty_var, &empty_var, -1);
         code_file<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
     }
@@ -334,12 +339,13 @@ void unary_op(quad* instr){
     // cout<<instr->arg1.second->addr_descriptor.reg;
    
     string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
+    if(instr->arg1.second->is_derefer) reg = "[ " + reg + " ]";
 
     
     // cout<<mem<<" ";
     string instruction = "";
     if(op[2] == 'P'){
+        // TODO
         if(op == "++P")      instruction = "inc";
         else if(op == "--P") instruction = "dec";
         code_file << "\t"<<instruction<< " "<<reg <<"\n";
@@ -349,15 +355,18 @@ void unary_op(quad* instr){
         
     }
     else if(op[2] == 'S'){
+        //done for single lvl pointer
         if(op == "++S")      instruction = "inc";
         else if(op == "--S") instruction = "dec";
-        update_reg_desc(reg, &instr->res);
-        string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-        if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
-
-        code_file << "\t"<<instruction<< " "<<reg1 <<"\n";
-        string mem = get_mem_location(&instr->arg1, -1);
-        code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
+        // update_reg_desc(reg, &instr->res);
+        string reg1 = getReg(&instr->res, &empty_var, &instr->arg2, instr->idx);
+        // if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
+        code_file<<"\tmov "<<get_mem_location(&instr->res, -1)<<", "<<reg1<<"\n";
+        free_reg(reg1);
+        code_file << "\t"<<instruction<< " "<<reg1<<"\n";
+        code_file<<"\tmov "<<reg<<", "<<reg1<<"\n";
+        
     }
     else if(op =="~" ) {
         instruction = "not";
@@ -683,6 +692,7 @@ void genCode(){
         for(int idx=start; idx < end; idx++){
             
             quad instr = code[idx];
+            code_file<<"\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
                 gen_func_label(&instr);
             }
