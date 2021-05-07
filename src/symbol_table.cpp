@@ -153,6 +153,16 @@ void insertKeywords(){
 	func_arg.insert({"printf", make_pair("FUNC_int",type) });
 	insertSymbol(*curr_table, "scanf", "FUNC_int", 4, 0, nullptr);
 	func_arg.insert({"scanf", make_pair("FUNC_int",type)});
+
+	type = {"int", "int"};
+	insertSymbol(*curr_table, "max", "FUNC_int", 4, 0, nullptr);
+	func_arg.insert({"max", make_pair("FUNC_int",type)});
+
+	insertSymbol(*curr_table, "malloc", "FUNC_int*", 4, 0, nullptr);
+	type = {"int"};
+	func_arg.insert({"malloc", make_pair("FUNC_int*", type)});
+
+	
 }
 
 string getType(string id){
@@ -207,7 +217,7 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	sym_entry* t = new sym_entry;
 	t->type = ((*table)[id])->type;
 	t->size = ((*table)[id])->size;
-	t->offset = ((*table)[id])->offset + struct_entry->offset;
+	t->offset = ((*table)[id])->offset;
 	// cout<<id<<" "<<((*table)[id])->offset<<" "<<struct_entry->offset<<" "<<struct_entry->size<<"\n";
 	t->next_use = -1;
 	t->heap_mem = 0;
@@ -317,6 +327,7 @@ void paramInsert(sym_table& table, string id, string type, int size, bool is_ini
 	cout<<id<<" "<<param_offset-size<<"\n";
 	table.insert(make_pair(id, createEntry(type, size, is_init, param_offset-size, ptr)));
 	if(type[type.length()-1] == '*' && !array_dims.empty()) array_dims.clear();
+	if(type[type.length()-1] == '*') table[id]->is_derefer = 1;
 	param_offset-=size;
 }
 

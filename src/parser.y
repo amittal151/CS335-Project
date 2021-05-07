@@ -400,15 +400,14 @@ postfix_expression
 				}
 				else{
 					$$->type = StructAttrType(temp1, temp);
-					$$->temp_name = $1->temp_name + "." + temp;
+					$$->temp_name = $1->temp_name + "->" + temp;
 					
-					qid temp = newtemp($$->type);
-					$1->type.pop_back();
-					// cout<<$1->type<<"\n";
-					sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
-					attr_sym->offset -= lookup($1->temp_name)->offset;
-					emit(qid("PTR_OP", NULL), $1->place, qid(string($3), attr_sym), temp, -1);
-					$$->place = temp;
+					qid temp_var = newtemp($$->type);
+					
+					sym_entry* attr_sym = retTypeAttrEntry(temp1, string($3), $1->temp_name);
+					// attr_sym->offset -= lookup($1->temp_name)->offset;
+					emit(qid("PTR_OP", NULL), $1->place, qid(string($3), attr_sym), temp_var, -1);
+					$$->place = temp_var;
 				}
 			}
 		}
@@ -2267,6 +2266,7 @@ declarator
 		}
 		else{
 			$$->type = $2->type + $1->type;
+			if($2->expType == 3) funcType+=$1->type;
 			$$->temp_name = $2->temp_name;
 			if($2->expType != 2) $$->size = 4;	// BONJOUR
 			else $$->size = $2->size;

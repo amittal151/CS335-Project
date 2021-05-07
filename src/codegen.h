@@ -12,8 +12,13 @@ void genCode();
 void update_reg_desc(string reg, qid* sym);
 void initializeRegs();
 void freeDeadTemp(int idx);
+
 string get_mem_location(qid* sym, int flag);
 string getReg(qid* sym, qid* result, qid* sym2, int idx);
+// string arg1_getReg(qid* arg1, qid* arg2, int idx);
+// string arg2_getMem(qid* arg2, qid* arg1, int flag);
+// string lvalue_getReg(qid* arg1, qid* arg2, int idx);
+
 void nextUse();
 int is_integer(string sym);
 void assign_op(quad* instr);
