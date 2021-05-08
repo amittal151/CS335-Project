@@ -8,4 +8,5 @@ parser.*pp
 *.csv
 *.out*
 *.txt
-
+*.asm
+*.o

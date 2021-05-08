@@ -898,7 +898,7 @@ string get_mem_location(qid* sym, int flag){
 
 string getReg(qid* sym, qid* result, qid* sym2, int idx){
     // Allocates best register if available
-    // freeDeadTemp(idx);
+    freeDeadTemp(idx);
 
     // Case 1
     string reg = "";
@@ -947,6 +947,9 @@ void nextUse(){
             } 
             if(code[i].arg2.first != "" && code[i].arg2.first[0] == '#' && code[i].arg2.second && code[i].arg2.second->next_use == -1){
                 code[i].arg2.second->next_use = i;
+            }
+            if(code[i].res.first != "" && code[i].res.first[0] == '#' && code[i].res.second && code[i].res.second->next_use == -1){
+                code[i].res.second->next_use = i;
             } 
         }
     }

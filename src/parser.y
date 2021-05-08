@@ -240,7 +240,7 @@ postfix_expression
 						$$->nextlist.clear();
 
 						// emit(qid("refParam", NULL), , NULL)qid("", qid("", NULL), q, -1);
-						emit(qid("CALL", NULL),qid($$->temp_name,NULL), qid("1", NULL), q, -1);
+						emit(qid("CALL", NULL),qid($$->temp_name,NULL), qid("0", NULL), q, -1);
 						currArgs.pop_back();
 						//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 						$$->place = q;
@@ -2020,6 +2020,7 @@ type_specifier
 		string temp = getType($1);
 		if(type == "") type = temp;
 		else if(!type_delim) type += " " + temp;
+		$$->type = temp;
 	}	
 	;
 
@@ -2082,10 +2083,10 @@ struct_or_union_specifier
 			if(type == ""){
 				type = string($1) + "_" + string($2);
 			}
-			else if(!type_delim) {
-				yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
-				$$->is_error = 1;
-			}
+			//else if(!type_delim) {
+			//	yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
+			//	$$->is_error = 1;
+			//}
 		}
 		else if(structName == string($2)){
 			// We are inside a struct
