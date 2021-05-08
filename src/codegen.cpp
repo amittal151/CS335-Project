@@ -24,6 +24,7 @@ string get_label(){
 void gen_data_section(){
     code_file << "extern printf\n";
     code_file << "extern scanf\n";
+    code_file << "extern malloc\n";
 }
 
 void starting_code(){
@@ -169,11 +170,14 @@ void clear_regs(){
 // free a specific register
 // eg for div we need eax, edx
 void free_reg(string reg){
+    // code_file<<"reg: "<<reg<<"\n";
     for(auto sym: reg_desc[reg]){
         if(is_integer(sym.first)) continue;
         sym.second->addr_descriptor.reg = "";
         code_file<<"\tmov "<<get_mem_location(&sym, 1)<<", "<<reg<<"\n";
+        // code_file<<"; "<<sym.first<<"\n";
     }
+    // code_file<<"\n";
     reg_desc[reg].clear();
 }
 
@@ -207,6 +211,10 @@ void call_func(quad *instr){
                 mem = "[ " + mem + " ]";
             }
             code_file<<"\tpush dword "<<mem<<"\n";
+        }
+        else if(params.top().second->isArray){
+            code_file<<"\tlea eax, "<<get_mem_location(&params.top(), -1)<<"\n";
+            code_file<<"\tpush eax\n";
         }
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
@@ -257,9 +265,9 @@ void assign_op(quad* instr){
             update_reg_desc(reg, &instr->res);        
         }
         else {
-            update_reg_desc(reg, &instr->res);        // since reg will still hold y's value, keep y in reg
-            reg_desc[reg].insert(instr->arg1);
-            instr->arg1.second->addr_descriptor.reg = reg;
+            // update_reg_desc(reg, &instr->res);        // since reg will still hold y's value, keep y in reg
+            reg_desc[reg].insert(instr->res);
+            instr->res.second->addr_descriptor.reg = reg;
         }
         
         if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
@@ -636,19 +644,22 @@ void array_op(quad* instr){
         string reg = getReg(&instr->res, &empty_var, &instr->arg2, instr->idx);
         string mem;
         
-        if(instr->arg1.first[0] != '#') {    //First index
+        if(instr->arg1.second->isArray) {    //First index
             if(instr->arg1.second->addr_descriptor.reg != ""){
                 string temp_reg = instr->arg1.second->addr_descriptor.reg;
                 instr->arg1.second->addr_descriptor.reg = "";
                 code_file<<"\tmov "<<get_mem_location(&instr->arg1, 0)<<", "<<temp_reg<<"\n"; 
-            }    
+            }
+            code_file<<";in if\n";    
             mem = get_mem_location(&instr->arg1, 0);
             code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
         }
         else {
+            code_file<<";in else!!!\n";
             mem = get_mem_location(&instr->arg1, 0);
             code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
         }
+        
         exclude_this.insert(reg);
         string reg1 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
         
@@ -657,7 +668,7 @@ void array_op(quad* instr){
         else code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
        
         code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
-        if(instr->arg1.second->array_dims.empty()) instr->res.second->is_derefer = 1;
+        if(instr->arg1.second->array_dims.empty() && instr->arg1.second->type[instr->arg1.second->type.length()-2] != '*') instr->res.second->is_derefer = 1;
 
         exclude_this.clear();
         reg_desc[reg1].erase(instr->arg2);
@@ -695,6 +706,12 @@ void array_op(quad* instr){
     //     update_reg_desc(reg, &instr->res);
         
     // }
+}
+
+void sizeof_op(quad* instr){
+    string mem = get_mem_location(&instr->res, 0);
+    cout<<"HERE "<<instr->arg1.second->type<<" "<<getSize(instr->arg1.second->type)<<"\n";
+    code_file<<"\tmov "<<mem<<", dword "<<getSize(instr->arg1.second->type)<<"\n";
 }
 
 void genCode(){
@@ -777,8 +794,7 @@ void genCode(){
             else if(instr.op.first == "PTR_OP") ptr_op(&instr);
             else if(instr.op.first == "member_access") member_access(&instr);
             else if(instr.op.first == "[ ]") array_op(&instr);
-            
-            
+            else if(instr.op.first == "SIZEOF") sizeof_op(&instr);
         }
         if(!ended) end_basic_block();
     }

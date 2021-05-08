@@ -38,7 +38,8 @@ map<string, vector<int>> gotolablelist;
 map<string, int> gotolabel;
 string storage_class = "";
 int stop_compiler = 0;
-
+int isArray = 0;	// true when array is declared
+int type_delim = 0;
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -622,7 +623,7 @@ unary_expression
 		$$ = makenode("unary_exp",attr);
 
 		//Semantic
-		if(!($1->is_error || $2->is_error) && $2->expType!=4){
+		if(!($1->is_error || $2->is_error)){
 			$$->isInit = $2->isInit;
 			string temp = unaryExp($1->node_name,$2->type);
 			if(!temp.empty()){
@@ -644,9 +645,6 @@ unary_expression
 			}
 		}
 		else{
-			if($2->expType==4){
-				yyerror("constant expression cannot be used as lvalue");
-			}
 			$$->is_error = 1;
 		}
 	}
@@ -691,7 +689,12 @@ unary_expression
 			qid q = newtemp("int");
 			$$->place = q;
 			$$->nextlist.clear();
-			emit(qid("SIZEOF", lookup("sizeof")), $3->place, qid("", NULL), q, -1);
+			cout<<$3->type<<" \n";
+			qid arg1;
+			arg1.second = new sym_entry;
+			arg1.second->type = $3->type;
+			arg1.first = $3->type;
+			emit(qid("SIZEOF", lookup("sizeof")), arg1, qid("", NULL), q, -1);
 		}
 		else{
 			if($3->expType==4){
@@ -759,10 +762,12 @@ cast_expression
 			$$->isInit = $4->isInit;
 
 			//--3AC
-			qid q = newtemp($$->type);
-			$$->place = q;
+			// qid q = newtemp($$->type);
+			$$->place = $4->place;
+			$$->place.second->type = $2->type;
+			cout<<$2->type<<" \n";
 			$4->nextlist.clear();
-			emit(qid($4->type+"to"+$$->type, NULL), $4->place, qid("", NULL), q, -1);
+			// emit(qid($4->type+"to"+$$->type, NULL), $4->place, qid("", NULL), q, -1);
 		}
 		else{
 			$$->is_error = 1;
@@ -1754,7 +1759,7 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'						{ $$ = $1;  type = ""; storage_class = "";}
+	: declaration_specifiers ';'						{ $$ = $1;  type = ""; type_delim = 0; storage_class = "";}
 	| declaration_specifiers init_declarator_list ';'	{	
 															vector<data> attr;
 															insertAttr(attr, $1, "", 1);
@@ -1762,15 +1767,17 @@ declaration
 															$$ = makenode("declaration",attr);
 
 															type = "";
+															type_delim = 0;
 															storage_class = "";
+															
 															// if($2->expType == 3){
 															// 	// Clear the Symbol table of Function;
 															// 	// But which function? We need func_name?
 															// 	// $2->temp_name
 															// 	// if func is already in the FuncArgs Map => Check argument types
 															// 	// If argument types dont match, return error!
-
 															// }
+
 															if(!$1->is_error && !$2->is_error){
 																// 3AC
 																$$->nextlist = $2->nextlist;
@@ -1855,6 +1862,7 @@ init_declarator
 				if(storage_class != "typedef"){
 					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 					$$->place = qid($1->temp_name, lookup($1->temp_name));
+					isArray = 1;
 				}
 				else{
 					insertTypedef(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
@@ -1933,7 +1941,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}	
 	| CHAR		{
@@ -1941,7 +1949,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}	
 	| SHORT		{
@@ -1949,7 +1957,7 @@ type_specifier
 		
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);	
+		else if(!type_delim) type += " " + string($1);	
 		$$->type = $1;
 	}	
 	| INT			{
@@ -1957,7 +1965,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| LONG			{
@@ -1965,7 +1973,7 @@ type_specifier
 		
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| FLOAT			{
@@ -1973,7 +1981,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| DOUBLE		{
@@ -1981,7 +1989,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| SIGNED		{
@@ -1989,7 +1997,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| UNSIGNED		{
@@ -1997,7 +2005,7 @@ type_specifier
 
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else if(!type_delim) type += " " + string($1);
 		$$->type = $1;
 	}
 	| struct_or_union_specifier	{
@@ -2011,7 +2019,7 @@ type_specifier
 		$$ = makeleaf($1);
 		string temp = getType($1);
 		if(type == "") type = temp;
-		else type += " " + temp;
+		else if(!type_delim) type += " " + temp;
 	}	
 	;
 
@@ -2070,11 +2078,11 @@ struct_or_union_specifier
 		// Semantics
 
 		if(typeLookup(string($1) + "_" + string($2))){
+			$$->type = string($1) + "_" + string($2);
 			if(type == ""){
 				type = string($1) + "_" + string($2);
-				$$->type = type;
 			}
-			else {
+			else if(!type_delim) {
 				yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
 				$$->is_error = 1;
 			}
@@ -2135,6 +2143,7 @@ struct_declaration
 		$$ = makenode("struct_declaration", v);
 
 		type = "";
+		type_delim = 0;
 		$$->is_error = $1->is_error || $2->is_error;
 	}
 	;
@@ -2147,7 +2156,7 @@ specifier_qualifier_list
 		$$ = makenode("specifier_qualifier_list", v);
 
 		$$->is_error = $1->is_error || $2->is_error; 
-		$$->type = $1->type + $2->type;
+		$$->type = $1->type + " " + $2->type;
 	}
 	| type_specifier	{ $$ = $1; }
 	| type_qualifier specifier_qualifier_list 	{
@@ -2157,6 +2166,7 @@ specifier_qualifier_list
 		$$ = makenode("specifier_qualifier_list", v);
 
 		$$->is_error = $1->is_error || $2->is_error; 
+		$$->type = $1->type + " " + $2->type;
 	}
 	| type_qualifier	{ $$ = $1; }
 	;
@@ -2288,7 +2298,7 @@ declarator
 direct_declarator
 	: IDENTIFIER {
 		$$ = makeleaf($1);
-
+		type_delim = 1;
 		// Semantics
 		$$->expType = 1; // Variable
 		if(type != "") $$->type = type;
@@ -2329,6 +2339,7 @@ direct_declarator
 				//3AC
 				$$->place = qid($$->temp_name, NULL);
 				array_dims.push_back($3->intVal);
+				isArray = 1;
 			}
 			else {
 				yyerror(( $1->temp_name + " declared as function returning an array").c_str());
@@ -2354,6 +2365,7 @@ direct_declarator
 
 				//3AC
 				$$->place = qid($$->temp_name, NULL);
+				isArray = 1;
 			}
 			else {
 				yyerror(( $1->temp_name + " declared as function returning an array").c_str());
@@ -2627,6 +2639,7 @@ parameter_declaration
 
 		// Semantics
 		if(!$1->is_error && !$2->is_error){
+			type_delim = 0;
 			type = "";
 			if($2->expType == 1 || $2->expType == 2) {
 				if(currLookup($2->temp_name)) {
@@ -2648,12 +2661,14 @@ parameter_declaration
 		$$ = makenode("parameter_declaration",v);
 
 		type = "";
+		type_delim = 0;
 		if($1->is_error || $2->is_error)$$->is_error = 1;
 	}
 	| declaration_specifiers {
 		$$ = $1;
 		funcArgs.push_back(type);
 		type = "";
+		type_delim = 0;
 	}
 	;
 
@@ -2800,17 +2815,18 @@ initializer_list
 
 
 statement
-	: labeled_statement		{$$ = $1; type = "";}
-	| compound_statement	{$$ = $1; type = "";}
-	| expression_statement	{$$ = $1; type = "";}
-	| selection_statement	{$$ = $1; type = "";}
-	| iteration_statement	{$$ = $1; type = "";}
-	| jump_statement		{$$ = $1; type = "";}
+	: labeled_statement		{$$ = $1; type = ""; type_delim = 0;}
+	| compound_statement	{$$ = $1; type = ""; type_delim = 0;}
+	| expression_statement	{$$ = $1; type = ""; type_delim = 0;}
+	| selection_statement	{$$ = $1; type = ""; type_delim = 0;}
+	| iteration_statement	{$$ = $1; type = ""; type_delim = 0;}
+	| jump_statement		{$$ = $1; type = ""; type_delim = 0;}
 	| error ';' 			{$$ = new treeNode; 
 				yyclearin; 
 				yyerrok; 
 				if_found = 0; 
-				type = ""; 
+				type = "";
+				type_delim = 0; 
 				structName = "";
 				funcArgs.clear();
 				currArgs.clear();
@@ -3286,6 +3302,7 @@ function_definition
 
 		// Semantics
 		type = "";
+		type_delim = 0;
 		funcName = "";
 		funcType = "";
 		if($1->is_error || $2->is_error || $4->is_error || $5->is_error) {
@@ -3315,6 +3332,7 @@ function_definition
 
 		// Semantics
 		type = "";
+		type_delim = 0;
 		funcName = "";
 		funcType = "";
 		if($1->is_error || $2->is_error || $4->is_error) {
@@ -3345,6 +3363,7 @@ function_definition
 
 		// Semantics
 		type = "";
+		type_delim = 0;
 		funcName = "";
 		funcType = "";
 		if($1->is_error || $3->is_error || $4->is_error) {
@@ -3374,6 +3393,7 @@ function_definition
 
 		// Semantics
 		type = "";
+		type_delim = 0;
 		funcName = ""; 
 		funcType = "";
 		if($1->is_error || $3->is_error) {
@@ -3410,6 +3430,7 @@ F
 			$$->node_name = (funcName);
 			block_count = 1;
 			type = "";
+			type_delim = 0;
 		}
 	}
 
