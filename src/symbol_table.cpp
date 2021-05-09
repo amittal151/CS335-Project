@@ -192,7 +192,12 @@ int printStructTable(string struct_name){
 	if((*curr_struct_table).find(struct_name)==(*curr_struct_table).end()){
 		struct_parent_table.insert(make_pair(curr_struct_table, nullptr));
 		if(struct_name.substr(0, 6) == "struct")(*curr_struct_table).insert(make_pair(struct_name, make_pair(struct_offset,curr_structure)));
-		else (*curr_struct_table).insert(make_pair(struct_name, make_pair(max_size,curr_structure)));
+		else{
+			(*curr_struct_table).insert(make_pair(struct_name, make_pair(max_size,curr_structure)));
+			for(auto it: *curr_structure){
+				it.second->offset = 0;
+			}
+		}
 		max_size = 0;
 		printSymbolTable(curr_structure, struct_name + "_" + to_string(struct_count)+".csv");  // prints structre symbol table
 		struct_count++;
@@ -325,9 +330,30 @@ void insertTypedef(sym_table& table, string id, string type, int size, bool is_i
 void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	cout<<id<<" "<<param_offset-size<<"\n";
 	table.insert(make_pair(id, createEntry(type, size, is_init, param_offset-size, ptr)));
-	if(type[type.length()-1] == '*' && !array_dims.empty()) array_dims.clear();
+	if(type[type.length()-1] == '*' && !array_dims.empty()){
+		size = 4;
+		vector<int> temp;
+		int curr = 1;
+		for(int i = array_dims.size()-1; i>=1; i--){
+			curr*=array_dims[i];
+			temp.push_back(curr);
+		}
+		reverse(temp.begin(), temp.end());
+		table[id]->array_dims = temp;
+		// if(isArray){
+		// 	table[id]->isArray = 1;
+			
+		// 	isArray = 0;
+		// }
+		table[id]->offset = param_offset - size;
+		for(int x: temp){
+			cout<<x<<" ";
+		}
+		cout<<"\n";
+		array_dims.clear();
+	}
 	// if(type[type.length()-1] == '*') table[id]->is_derefer = 1;
-	param_offset-=size;
+param_offset-=size;
 }
 
 void clear_paramoffset(){

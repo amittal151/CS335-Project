@@ -153,7 +153,9 @@ primary_expression
 
 
 		//--3AC
-		$$->place = qid($1, NULL);
+		string str = string($1);
+		sym_entry* temp = new sym_entry;
+		$$->place = qid(str, temp);
 		$$->nextlist.clear();
 
 	}
@@ -2080,9 +2082,9 @@ struct_or_union_specifier
 
 		if(typeLookup(string($1) + "_" + string($2))){
 			$$->type = string($1) + "_" + string($2);
-			if(type == ""){
-				type = string($1) + "_" + string($2);
-			}
+			// if(type == ""){
+			type = string($1) + "_" + string($2);
+			// }
 			//else if(!type_delim) {
 			//	yyerror(("cannot combine with previous " + type + " declaration specifier").c_str());
 			//	$$->is_error = 1;
@@ -2350,6 +2352,7 @@ direct_declarator
 		else $$->is_error = 1;
 	}
 	| direct_declarator '[' ']'{
+		cout<<"HELLO\n";
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "[ ]", 0);
@@ -2366,6 +2369,7 @@ direct_declarator
 
 				//3AC
 				$$->place = qid($$->temp_name, NULL);
+				array_dims.push_back(0);
 				isArray = 1;
 			}
 			else {
