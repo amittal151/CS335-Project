@@ -52,7 +52,7 @@ void add_op(quad* instr){
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
         string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);    // reg - mem - [ reg_temp ]
-        
+        //free_reg(reg1);
         if(instr->arg1.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
@@ -284,13 +284,7 @@ void assign_op(quad* instr){
 
     instr->arg1.first = char_to_int(instr->arg1.first);
     // x = 1
-    if(is_integer(instr->arg1.first)){
-        // string reg = getReg(instr->res, qid("", NULL), qid("", NULL), instr->idx);
-        string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
-        code_file << "\tmov "<< mem << ", dword "<< stoi(instr->arg1.first) <<endl;
-    } 
-    // *x = something
-    else if(instr->res.second->is_derefer){
+    if(instr->res.second->is_derefer){
         // cout<<"I am here"<<endl;
         string res_mem = getReg(&instr->res, &empty_var, &instr->arg1, -1);
         string arg1_mem = getReg(&instr->arg1, &empty_var, &instr->res, -1);
@@ -301,9 +295,15 @@ void assign_op(quad* instr){
         }
         // cout<<"I am here 2 "<<endl;
         code_file<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
-        cout<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
+        //cout<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
         // cout<<"I am here 3 "<<endl;
     }
+    else if(is_integer(instr->arg1.first)){
+        // string reg = getReg(instr->res, qid("", NULL), qid("", NULL), instr->idx);
+        string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
+        code_file << "\tmov "<< mem << ", dword "<< stoi(instr->arg1.first) <<endl;
+        //nstr->res.second->addr_descriptor.stack = 0;
+    } 
     // x = y
     else{
         string reg = getReg(&instr->arg1, &instr->res, &empty_var, instr->idx);
@@ -330,6 +330,7 @@ void assign_op(quad* instr){
             string str = get_mem_location(&instr->res, &instr->arg1, instr->idx, 0);
             code_file<<"\tmov "<< str <<", "<<reg_stored<<"\n";
         }
+        instr->res.second->addr_descriptor.stack = 0;
     }
 }
 
@@ -384,7 +385,7 @@ void rshift_op(quad* instr){    // >>
     string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
     code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
     mem2 = "cl";    
-    code_file << "\tshr " << reg1 << ", " << mem2 <<"\n";
+    code_file << "\tsar " << reg1 << ", " << mem2 <<"\n";
     exclude_this.clear();
     update_reg_desc(reg1, &instr->res);
 }
@@ -802,6 +803,7 @@ void array_op(quad* instr){
         
         exclude_this.insert(reg);
         string reg1 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
+       // free_reg(reg1);
         if(instr->arg2.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
@@ -824,7 +826,7 @@ void array_op(quad* instr){
         reg_desc[reg1].erase(instr->arg2);
         instr->arg2.second->addr_descriptor.reg = "";
         
-        // Do  not touch this shit else it will break the whole shit
+        
         update_reg_desc(reg, &instr->res);
 
 }
@@ -1054,7 +1056,8 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     if(sym->second->addr_descriptor.reg != "") {
         reg = sym->second->addr_descriptor.reg;
         // If Not temporary, update the value of reg. into memory
-        if(sym->first[0] != '#' && !(sym->second->addr_descriptor.stack || sym->second->addr_descriptor.heap)){
+        if(sym->first[0]!='#' && !(sym->second->addr_descriptor.stack || sym->second->addr_descriptor.heap)){
+            cout<<"in getreg\n";
             sym->second->addr_descriptor.reg = "";
             string str = get_mem_location(sym, sym2, idx, 1); 
             code_file << "\tmov " << str << ", " << reg <<endl;
