@@ -130,6 +130,9 @@ void div_op(quad* instr){
 
         code_file<<"\tcdq\n";
         code_file<<"\tidiv "<<reg2<<"\n";
+        // if(reg_desc.find(instr->res.second->addr_descriptor.reg) != reg_desc.end()){
+        //     reg_desc[instr->res.second->addr_descriptor.reg].erase(instr->res);
+        // }
         instr->res.second->addr_descriptor.reg = "eax";
         reg_desc["eax"].clear();
         reg_desc["edx"].clear();
@@ -238,6 +241,9 @@ void call_func(quad *instr){
             code_file<<"\tlea eax, "<< str <<"\n";
             code_file<<"\tpush eax\n";
         }
+        else if(typeLookup(params.top().first)){
+            
+        }
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
             string mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
@@ -308,6 +314,8 @@ void assign_op(quad* instr){
         else {
             // update_reg_desc(reg, &instr->res);        // since reg will still hold y's value, keep y in reg
             reg_desc[reg].insert(instr->res);
+            string prev_reg = instr->res.second->addr_descriptor.reg;
+            if(prev_reg != "") reg_desc[prev_reg].erase(instr->res);
             instr->res.second->addr_descriptor.reg = reg;
         }
         
