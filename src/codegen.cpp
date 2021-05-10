@@ -280,6 +280,7 @@ string char_to_int(string sym){
     return sym;
 }
 
+
 void assign_op(quad* instr){
 
     instr->arg1.first = char_to_int(instr->arg1.first);
@@ -857,8 +858,10 @@ void genCode(){
         int end = it1->first;
         
         for(int idx=start; idx < end; idx++){
-            
             quad instr = code[idx];
+            if(instr.arg1.first != "") instr.arg1.first = char_to_int(instr.arg1.first);
+            if(instr.arg2.first != "") instr.arg2.first = char_to_int(instr.arg2.first);
+            
             code_file<<"\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
                 gen_func_label(&instr);
@@ -1021,6 +1024,7 @@ string get_mem_location(qid* sym, qid* sym2, int idx, int flag){
             update_reg_desc(reg, sym);
             return "[ " + reg + " ]";
         }
+
         return str;
     }
     // Wont come here as of now
@@ -1066,7 +1070,12 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     }
 
     reg = getTemporaryReg(sym2, idx);
-     
+    
+    //check for char and set value in reg to 0
+    // string tmp = char_to_int(sym->first);
+    //if(sym->second->type == "char") code_file << "\txor "<< reg <<", "<<reg<<"\n";
+
+
     // code_file<<"; "<<sym->first<<" , Reg : "<<reg<<" "<<str<<endl;
     if(sym->first[0] == '\"'){
         stringlabels[string_counter] = sym->first;
@@ -1075,7 +1084,7 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     }
     else{
         string str = get_mem_location(sym, sym2, idx, -1);
-        code_file << "\tmov " << reg << ", "<< str <<endl;
+        code_file << "\tmov " << reg << ", "<< str <<"\n";
         sym->second->addr_descriptor.reg = reg;
         reg_desc[reg].insert(*sym);
     }
