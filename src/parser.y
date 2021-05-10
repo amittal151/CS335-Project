@@ -1618,16 +1618,21 @@ conditional_expression
 
 				backpatch($1->truelist, $2);
 				backpatch($1->falselist, $6);
+				backpatch($3->nextlist, $4-1);
+
 				code[$4-1].arg1 = $3->place;
 				code[$4-1].res = temp1;
 
 				//code[$8-1].arg1 = $7->place;
 				//code[$8-1].res = temp1;
 				
-				$$->nextlist = $3->nextlist;
+				//$$->nextlist = $7->nextlist;
+				backpatch($7->nextlist, code.size());
 				// ????
+
 				emit(qid("=", lookup("=")), $7->place, qid("", NULL), temp1, -1);
-				$$->nextlist.insert($$->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
+				//$$->nextlist.insert($$->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
+
 				$$->nextlist.push_back($4);
 				//$$->nextlist.push_back($8);
 
