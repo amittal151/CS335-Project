@@ -537,6 +537,8 @@ argument_expression_list
 			//--3AC
 			$$->nextlist.clear();
 			int _idx = -1;
+
+			backpatch($3->nextlist, code.size());
 			if($3->type == "char*" && $3->place.second == NULL) _idx = -4;
 			emit(qid("param", NULL), $3->place, qid("", NULL), qid("", NULL), _idx);
 		}
@@ -2582,6 +2584,8 @@ A
 		func_flag = 0;
 		funcArgs.clear();
 		createParamList();
+		gotolablelist.clear();
+		gotolabel.clear();
 	}
 
 pointer
@@ -3346,6 +3350,14 @@ function_definition
 		type_delim = 0;
 		funcName = "";
 		funcType = "";
+
+		for(auto i: gotolablelist){
+			if(gotolabel.find(i.first) == gotolabel.end()){
+				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+			}
+			else backpatch(i.second, gotolabel[i.first]);
+		}
+
 		if($1->is_error || $2->is_error || $4->is_error || $5->is_error) {
 			$$->is_error = 1;
 		}
@@ -3376,6 +3388,14 @@ function_definition
 		type_delim = 0;
 		funcName = "";
 		funcType = "";
+
+		for(auto i: gotolablelist){
+			if(gotolabel.find(i.first) == gotolabel.end()){
+				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+			}
+			else backpatch(i.second, gotolabel[i.first]);
+		}
+
 		if($1->is_error || $2->is_error || $4->is_error) {
 			$$->is_error = 1;
 		}
@@ -3407,6 +3427,14 @@ function_definition
 		type_delim = 0;
 		funcName = "";
 		funcType = "";
+
+		for(auto i: gotolablelist){
+			if(gotolabel.find(i.first) == gotolabel.end()){
+				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+			}
+			else backpatch(i.second, gotolabel[i.first]);
+		}
+
 		if($1->is_error || $3->is_error || $4->is_error) {
 			$$->is_error = 1;
 		}
@@ -3437,6 +3465,15 @@ function_definition
 		type_delim = 0;
 		funcName = ""; 
 		funcType = "";
+
+
+		for(auto i: gotolablelist){
+			if(gotolabel.find(i.first) == gotolabel.end()){
+				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
+			}
+			else backpatch(i.second, gotolabel[i.first]);
+		}
+		
 		if($1->is_error || $3->is_error) {
 			$$->is_error = 1;
 		}
@@ -3675,17 +3712,10 @@ int main(int argc, char* argv[]){
 	
 
 	if(!stop_compiler){
-		
-		for(auto i: gotolablelist){
-			if(gotolabel.find(i.first) == gotolabel.end()){
-				yyerror(("label \'" + string(i.first) + "\' used but not defined").c_str());
-			}
-			else backpatch(i.second, gotolabel[i.first]);
-		}
 
 		code_file.open("gen_code.asm");
 
-		//print3AC_code();
+		print3AC_code();
 		genCode();
 		endAST();
 		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");

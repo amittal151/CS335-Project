@@ -333,9 +333,9 @@ void call_func(quad *instr){
 string char_to_int(string sym){
     if(sym[0]!='\'')return sym;
     if(sym[1] == '\\'){
-        cout<<"HERE\n";
+        //cout<<"HERE\n";
         string s = sym.substr(1,2);
-        cout<<s<<"\n";
+        //cout<<s<<"\n";
         if(s == "\\0") return "0";
         // TODO
     } 
@@ -941,12 +941,17 @@ void genCode(){
     findBasicBlocks();
     initializeRegs();
     nextUse();
-    
+    vector<int> visited = findDeadCode();
+
     gen_data_section();
     starting_code();
 
-
+    int index = 0;
     for (auto it=leaders.begin(); it != leaders.end(); it++){
+       if(!visited[index++]){
+        cout<<it->first<<endl;
+        continue;
+    }
         code_file << it->second <<":\n";
         auto it1 = it;
         it1++;
@@ -1036,7 +1041,7 @@ void end_basic_block(){
         }
         reg->second.clear();
     }
-    cout<<"Coming out of end_basic_block"<<endl;
+    //cout<<"Coming out of end_basic_block"<<endl;
 }
 
 
@@ -1245,3 +1250,60 @@ void findBasicBlocks(){
     }
     leaders.insert(make_pair(code.size(), get_label()));
 }
+
+
+/////deadcode removal
+
+
+void dfs(int curr, vector<int>&visited, vector<vector<int> >&adj_list){
+    visited[curr]=1;
+    for(auto h:adj_list[curr]){
+        if(!visited[h]) dfs(h, visited, adj_list);
+    }
+}
+
+vector<int> findDeadCode(){
+
+    int n = leaders.size()+1;
+    vector<int> visited(n, 0);
+    vector<vector<int > > adj_list(n, vector<int>());
+
+    int id = 0;
+    unordered_map<int , int> get_leader;
+    for(auto it:leaders){
+        get_leader.insert(make_pair(it.first, id++));
+    }
+    id=0;
+    for(auto it = leaders.begin(); it!=leaders.end(); ++it){
+        int start = it->first;
+        auto it1 = it;
+        ++it1;
+        if(it1 == leaders.end()) break;
+        int last = it1->first - 1;
+
+        if(code[last].op.first == "GOTO"){
+            adj_list[id].push_back(get_leader[code[last].idx]);
+            if(code[last].arg1.first == "IF") adj_list[id].push_back(get_leader[last+1]);
+        }
+        else{
+            adj_list[id].push_back(get_leader[last+1]);
+        }
+        id++;
+    }
+
+    // for(int i=0; i<id; i++){
+    //     cout<<i<<": ";
+    //     for(auto h:adj_list[i]) cout<<"( "<<h<<")"<<", ";
+    //     cout<<endl;
+    // }
+
+    dfs(0, visited, adj_list);
+
+    for(int i=0; i<n; i++){
+        cout<<visited[i]<<" ";
+    }
+    cout<<endl;
+    return visited;
+}
+
+
