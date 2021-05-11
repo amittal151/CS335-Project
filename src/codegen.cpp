@@ -933,7 +933,7 @@ void array_op(quad* instr){
 void sizeof_op(quad* instr){
     string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
     // cout<<"HERE "<<instr->arg1.second->type<<" "<<getSize(instr->arg1.second->type)<<"\n";
-    code_file<<"\tmov "<<mem<<", dword "<<getSize(instr->arg1.second->type)<<"\n";
+    code_file<<"\tmov "<<mem<<", dword "<<instr->arg1.second->size<<"\n";
 }
 
 void genCode(){

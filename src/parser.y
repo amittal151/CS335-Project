@@ -40,6 +40,7 @@ string storage_class = "";
 int stop_compiler = 0;
 int isArray = 0;	// true when array is declared
 int type_delim = 0;
+vector<qid> initializer_list_values;
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -141,7 +142,7 @@ primary_expression
 
 		//--3AC
 		sym_entry* temp = new sym_entry;
-		$$->place = qid(($1->str), temp);
+		$$->place = qid(to_string($1->intVal), temp);
 		$$->nextlist.clear();
 
 	}
@@ -696,6 +697,7 @@ unary_expression
 			arg1.second = new sym_entry;
 			arg1.second->type = $3->type;
 			arg1.first = $3->type;
+			arg1.second->size = getSize(arg1.first);
 			emit(qid("SIZEOF", lookup("sizeof")), arg1, qid("", NULL), q, -1);
 		}
 		else{
@@ -1890,26 +1892,53 @@ init_declarator
 			if( currLookup($1->temp_name) ){
 				string errstr = $1->temp_name + " is already declared";
 				yyerror(errstr.c_str());
+				$$->is_error = 1;
 			}
 			else{
+				$1->size = max($1->size, (int)initializer_list_values.size()*4);
+				cout<<$1->size<<"\n";
 				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			}
 			// string a = checkType($1->type, $4->type);
 			if(!isVoid($1->type)){
+				cout<<"HERE\n";
 				
-				$1->place = qid($1->temp_name, lookup($1->temp_name));
-				// TODO
-				assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
+				sym_entry* entry = lookup($1->temp_name);
+				$1->place = qid($1->temp_name, entry);
+				
+				if(!entry->isArray) assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
+				else{
+					// cout<<"HERE @\n";
+					cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
+					// cout<<
+					int i = 0;
+					reverse(initializer_list_values.begin(), initializer_list_values.end());
+					for(qid x: initializer_list_values){
+						cout<<x.first<<" ";
+						qid temp;
+						temp.first = "array_init";
+						temp.second = new sym_entry;
+						temp.second->offset = entry->offset+i;
+						temp.second->size = 4;
+						cout<<temp.second->offset<<"\n";
+						i+=4;
+						emit(qid("=", NULL), x, qid("", NULL), temp, -1);
+					}
+					cout<<"\n";
+				}
+				
 				$$->place = $1->place;
 				$$->nextlist = $4->nextlist;
 				backpatch($1->nextlist, $3);
 			}
 			else { 
 				yyerror(("Invalid assignment to variable of type " + $1->type).c_str()); 
+				$$->is_error = 1;
 			}
-			$$->place = qid($1->node_name, lookup($1->node_name));
+			$$->place = qid($1->temp_name, lookup($1->temp_name));
 		}
 		else $$->is_error = 1;
+		initializer_list_values.clear();
 	}
 	;
 
@@ -2790,6 +2819,7 @@ direct_abstract_declarator
 initializer
 	: assignment_expression{
 		$$ = $1 ;
+		initializer_list_values.push_back($1->place);
 	}
 	| '{' initializer_list '}' {
 		$$ = $2 ;

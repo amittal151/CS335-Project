@@ -84,6 +84,7 @@ void makeSymbolTable(string name, string f_type, int offset_flag){
 void removeFuncProto(){
 	// Removes the Temporary function Created in the Scope
 	avl = 0;
+	clear_paramoffset();
 	updSymbolTable("dummyF_name",1);
 	parent_table.erase((*curr_table)["dummyF_name"]->entry);
 	(*curr_table).erase("dummyF_name");
@@ -158,6 +159,10 @@ void insertKeywords(){
 	insertSymbol(*curr_table, "malloc", "FUNC_void*", 4, 0, nullptr);
 	type = {"int"};
 	func_arg.insert({"malloc", make_pair("FUNC_void*", type)});	
+
+	// insertSymbol(*curr_table, "free", "FUNC_void", 4, 0, nullptr);
+	// type = {""};
+	// func_arg.insert({"free", make_pair("FUNC_void", type)});	
 }
 
 string getType(string id){
@@ -374,7 +379,7 @@ void paramInsert(sym_table& table, string id, string type, int size, bool is_ini
 		array_dims.clear();
 	}
 	// if(type[type.length()-1] == '*') table[id]->is_derefer = 1;
-param_offset-=size;
+	param_offset-=size;
 }
 
 void clear_paramoffset(){
