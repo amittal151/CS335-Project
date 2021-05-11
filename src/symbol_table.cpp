@@ -182,6 +182,25 @@ int insertStructAttr(string attr, string type, int size, bool init){
 		Goffset.top()+=size;
 		max_size = max(max_size, size);
 		(*curr_structure).insert(make_pair(attr, createEntry(type,size,init, struct_offset, nullptr)));
+		if(type[type.length()-1] == '*' && !array_dims.empty()){
+			vector<int> temp;
+			int curr = 1;
+			for(int i = array_dims.size()-1; i>=1; i--){
+				curr*=array_dims[i];
+				temp.push_back(curr);
+			}
+			reverse(temp.begin(), temp.end());
+			(*curr_structure)[attr]->array_dims = temp;
+			if(isArray){
+				(*curr_structure)[attr]->isArray = 1;
+				isArray = 0;
+			}
+			for(int x: temp){
+				cout<<x<<" ";
+			}
+			cout<<"\n";
+			array_dims.clear();
+		}
 		struct_offset += size;
 		return 1;
 	}
@@ -218,10 +237,12 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	t->type = ((*table)[id])->type;
 	t->size = ((*table)[id])->size;
 	t->offset = ((*table)[id])->offset;
+	t->isArray = ((*table)[id])->isArray;
 	// cout<<id<<" "<<((*table)[id])->offset<<" "<<struct_entry->offset<<" "<<struct_entry->size<<"\n";
 	t->next_use = -1;
 	t->heap_mem = 0;
 	t->is_derefer = 0;
+	
 
 	return t;
 }

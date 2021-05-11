@@ -9,6 +9,7 @@ map<qid, int> addr_pointed_to;
 
 int string_counter = 0; 
 int label_counter = 0;
+int arg_size = 0;
 
 set<string> exclude_this;
 
@@ -173,10 +174,45 @@ void return_op(quad* instr){
     // return a;
     if(instr->arg1.first != ""){
         // clear_regs();
-        string mem = get_mem_location(&instr->arg1, &empty_var, instr->idx, 1);
-        if(mem != "eax") code_file<<"\tmov eax, "<<mem<<"\n";
-        code_file<<"\tleave\n";
-        code_file<<"\tret\n";
+        if(typeLookup(instr->arg1.second->type)){
+            
+            for(auto it: reg_desc){
+                free_reg(it.first);
+            }
+
+            string reg1 = getTemporaryReg(&empty_var, instr->idx);
+            
+            exclude_this.insert(reg1);
+            string reg2 = getTemporaryReg(&empty_var, instr->idx);
+            exclude_this.clear();
+            
+            code_file<<"\tmov "<<reg1<<", [ ebp + "<<arg_size<<" ]\n";
+            
+            int struct_size = getStructsize(instr->arg1.second->type);
+            int struct_offset = instr->arg1.second->offset;
+            // sym_table* struct_table = typeTable(instr->arg1.second->type);
+            if(instr->arg1.second->offset < 0){
+                for(int i = 0; i<struct_size; i+=4){
+                    code_file<<"\tmov "<<reg2<<", [ ebp + "<<abs(struct_offset) - i<<" ]\n";
+                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
+                }
+            }
+            else{
+                cout<<struct_size<<" "<<struct_offset<<" HERE\n";
+                for(int i = 0; i<struct_size; i+=4){
+                    code_file<<"\tmov "<<reg2<<", [ ebp - "<<struct_offset + 4 + i<<" ]\n";
+                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
+                }
+            }
+            code_file<<"\tleave\n";
+            code_file<<"\tret\n";
+        }
+        else{
+            string mem = get_mem_location(&instr->arg1, &empty_var, instr->idx, 1);
+            if(mem != "eax") code_file<<"\tmov eax, "<<mem<<"\n";
+            code_file<<"\tleave\n";
+            code_file<<"\tret\n";
+        }
     }
     else{
         // clear_regs();
@@ -221,6 +257,15 @@ void call_func(quad *instr){
     int i = stoi(instr->arg2.first);
     int sz = i;
 
+    sym_entry* func_entry = lookup(instr->arg1.first);
+    string ret_type = func_entry->type.substr(5, func_entry->type.length()-5);
+    
+    if(typeLookup(ret_type)){
+        // cout<<"HERE\n";
+        code_file<<"\tlea eax, "<<get_mem_location(&instr->res, &empty_var, -1, -1)<<"\n";
+        code_file<<"\tpush eax\n";
+    }
+
     while(i>0){
         // free_reg(func_regs[curr_reg]);
         if(params.top().first[0] == '\"'){
@@ -241,8 +286,22 @@ void call_func(quad *instr){
             code_file<<"\tlea eax, "<< str <<"\n";
             code_file<<"\tpush eax\n";
         }
-        else if(typeLookup(params.top().first)){
-            
+        else if(typeLookup(params.top().second->type)){
+            int type_size = getSize(params.top().second->type), type_offset = params.top().second->offset;
+            if(type_offset > 0){
+                for(int i = type_offset; i<type_size + type_offset; i+=4){
+                    code_file<<"\tpush dword [ ebp - "<<i+4<<" ]\n";
+                }
+            }
+            else{
+                for(int i = 0; i<type_size; i+=4){
+                    code_file<<"\tpush dword [ ebp + "<<abs(type_offset+i)<<" ]\n";
+                }
+            }
+                // for(int i = 0; i<type_size; i+=4){
+                //     int curr_offset = 
+                // }
+                // cout<<type_size<<" "<<type_offset<<"\n";
         }
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
@@ -260,10 +319,14 @@ void call_func(quad *instr){
     code_file<<"\tcall "<<instr->arg1.first<<"\n";
     
     // Clear args from stack
-    code_file<<"\tadd esp, "<<4*sz<<"\n";
-    reg_desc["eax"].insert(instr->res);
-    instr->res.second->addr_descriptor.reg = "eax";
+    
+    if(!typeLookup(ret_type)){
+        reg_desc["eax"].insert(instr->res);
+        instr->res.second->addr_descriptor.reg = "eax";
+    }
+    else sz++;
 
+    code_file<<"\tadd esp, "<<4*sz<<"\n";
 }
 
 string char_to_int(string sym){
@@ -286,7 +349,7 @@ void assign_op(quad* instr){
     instr->arg1.first = char_to_int(instr->arg1.first);
     // x = 1
     if(instr->res.second->is_derefer){
-        // cout<<"I am here"<<endl;
+        cout<<"I am here"<<endl;
         string res_mem = getReg(&instr->res, &empty_var, &instr->arg1, -1);
         string arg1_mem = getReg(&instr->arg1, &empty_var, &instr->res, -1);
         res_mem = "[ " + res_mem + " ]";
@@ -304,6 +367,21 @@ void assign_op(quad* instr){
         string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
         code_file << "\tmov "<< mem << ", dword "<< stoi(instr->arg1.first) <<endl;
         //nstr->res.second->addr_descriptor.stack = 0;
+    }
+    else if(typeLookup(instr->res.second->type)){
+        
+        for(auto it: reg_desc){
+            free_reg(it.first);
+        }
+
+        string reg = getTemporaryReg(&empty_var, instr->idx);
+        int res_offset = instr->res.second->offset, temp_offset = instr->arg1.second->offset;
+        int struct_size = getStructsize(instr->res.second->type);
+        
+        for(int i = 0; i<struct_size; i+=4){
+            code_file<<"\tmov "<<reg<<", [ ebp - "<<temp_offset + 4 + i<<" ]\n";
+            code_file<<"\tmov [ ebp - "<<res_offset + 4 + i<<" ], "<<reg<<"\n";
+        }
     } 
     // x = y
     else{
@@ -318,6 +396,7 @@ void assign_op(quad* instr){
             string prev_reg = instr->res.second->addr_descriptor.reg;
             if(prev_reg != "") reg_desc[prev_reg].erase(instr->res);
             instr->res.second->addr_descriptor.reg = reg;
+            cout<<"HERE !! "<<reg<<" "<<instr->res.first<<"\n";
         }
         
         if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
@@ -346,6 +425,21 @@ void gen_func_label(quad* instr){
     // //     if(instr->op.first[i] == ' ') break;
     // //     name+=instr->op.first[i];
     // // }
+    
+    // curr_func = s;
+    arg_size = 0;
+    sym_entry* func_entry = lookup(s);
+    for(auto it: *(func_entry->entry)){
+        if(it.second->offset < 0){
+            // cout<<it.second->offset<<" ";
+            arg_size = max(arg_size, abs(it.second->offset));
+        }
+    }
+    if(arg_size) arg_size+=4;
+    else arg_size = 8;
+    // cout<<"\n";
+
+
     code_file << s << " :\n";
     code_file << "\tpush ebp\n";
     code_file << "\tmov ebp, esp\n"; 
@@ -761,7 +855,7 @@ void ptr_op(quad* instr){
     cout<<reg<<" "<<instr->arg2.second->offset<<"\n";
     code_file<<"\tadd "<<reg<<", "<<instr->arg2.second->offset<<"\n";
 
-    instr->res.second->is_derefer = 1;
+    if(!instr->arg2.second->isArray) instr->res.second->is_derefer = 1;
     update_reg_desc(reg, &instr->res);
 }
 
@@ -769,6 +863,8 @@ void member_access(quad* instr){
     if(!instr->arg1.second->is_derefer){
         instr->res.second->offset = instr->arg1.second->offset - instr->arg2.second->offset - instr->arg2.second->size + instr->arg1.second->size;
         pointed_by[instr->res.second->offset] = 1;
+        instr->res.second->isArray = instr->arg2.second->isArray;
+        // cout<<instr-
         // cout<<instr->arg1.second->offset<<" "<<instr->arg2.second->offset<<" "<<instr->arg1.second->size<<"\n";
         // cout<<"offset "<<instr->res.second->offset<<"\n";
     }
@@ -776,7 +872,8 @@ void member_access(quad* instr){
         string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
         // cout<<reg<<" "<<instr->arg2.second->offset<<"\n";
         code_file<<"\tadd "<<reg<<", "<<instr->arg2.second->offset<<"\n";
-        instr->res.second->is_derefer = 1;
+        if(!instr->arg2.second->isArray) instr->res.second->is_derefer = 1;
+        
         update_reg_desc(reg, &instr->res);
     }
 }
@@ -821,8 +918,8 @@ void array_op(quad* instr){
         }
        
         code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
-        if(instr->arg1.second->array_dims.empty() && instr->arg1.second->type[instr->arg1.second->type.length()-2] != '*') instr->res.second->is_derefer = 1;
-
+        if(instr->arg1.second->array_dims.empty()) instr->res.second->is_derefer = 1;
+        // cout<<instr->arg1.second->array_dims.empty() <<" "<<
         exclude_this.clear();
         reg_desc[reg1].erase(instr->arg2);
         instr->arg2.second->addr_descriptor.reg = "";

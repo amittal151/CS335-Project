@@ -2276,7 +2276,8 @@ declarator
 
 		//Semantics
 		if(type == "#INSIDE"){
-			$$->type = structName + $1->type;
+			// cout<<"YO "<<structName + $1->type<<" "<<$2->type<<"\n";
+			$$->type = structName + $1->type + $2->type.substr(7, $2->type.length()-7);
 			$$->temp_name = $2->temp_name;
 			if($2->expType != 2) $$->size = 4;	// BONJOUR
 			else $$->size = $2->size;
@@ -3654,7 +3655,7 @@ int main(int argc, char* argv[]){
 
 		code_file.open("gen_code.asm");
 
-		print3AC_code();
+		//print3AC_code();
 		genCode();
 		endAST();
 		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
