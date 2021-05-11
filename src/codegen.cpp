@@ -862,9 +862,17 @@ void ptr_op(quad* instr){
 
 void member_access(quad* instr){
     if(!instr->arg1.second->is_derefer){
+        // cout<<"HERE\n";
         instr->res.second->offset = instr->arg1.second->offset - instr->arg2.second->offset - instr->arg2.second->size + instr->arg1.second->size;
+        if(instr->arg2.second->isArray) {
+            instr->res.second->offset += instr->arg2.second->size - 4;
+        }
         pointed_by[instr->res.second->offset] = 1;
         instr->res.second->isArray = instr->arg2.second->isArray;
+        // instr->res.second->array_dims = instr->arg2.second->array_dims;
+        for(int i: instr->res.second->array_dims) {
+            cout<<i<<"\n";
+        }
         // cout<<instr-
         // cout<<instr->arg1.second->offset<<" "<<instr->arg2.second->offset<<" "<<instr->arg1.second->size<<"\n";
         // cout<<"offset "<<instr->res.second->offset<<"\n";

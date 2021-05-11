@@ -152,7 +152,6 @@ primary_expression
 		$$->temp_name = string($1);
 		$$->strVal = string($1);
 
-
 		//--3AC
 		string str = string($1);
 		sym_entry* temp = new sym_entry;
@@ -192,11 +191,16 @@ postfix_expression
 
 				qid temp_var = newtemp($$->type);
 
-				emit(qid("[ ]", NULL), $1->place, $3->place, temp_var, -1);
-
 				temp_var.second->array_dims = $1->place.second->array_dims;
 				if(temp_var.second->array_dims.size()) temp_var.second->array_dims.erase(temp_var.second->array_dims.begin());
 				$$->place = temp_var;
+
+				//for(int a: temp_var.second->array_dims) {
+				//	cout<<a<<"\n";
+				//}
+				// cout<<"HELOOOOOOOOOOOOOOOOOOOOO\n";
+
+				emit(qid("[ ]", NULL), $1->place, $3->place, temp_var, -1);	
 				
 				//TODO (is_init);
 
@@ -366,6 +370,9 @@ postfix_expression
 				sym_entry* attr_sym = retTypeAttrEntry($1->type, string($3), $1->temp_name);
 				// attr_sym->offset -= lookup($1->temp_name)->offset;
 				emit(qid("member_access", NULL), $1->place, qid(string($3), attr_sym), temp_var, -1);
+
+				temp_var.second->array_dims = attr_sym->array_dims;
+
 				$$->place = temp_var;
 			}
 		}
@@ -411,6 +418,9 @@ postfix_expression
 					sym_entry* attr_sym = retTypeAttrEntry(temp1, string($3), $1->temp_name);
 					// attr_sym->offset -= lookup($1->temp_name)->offset;
 					emit(qid("PTR_OP", NULL), $1->place, qid(string($3), attr_sym), temp_var, -1);
+					
+					temp_var.second->array_dims = attr_sym->array_dims;
+					
 					$$->place = temp_var;
 				}
 			}

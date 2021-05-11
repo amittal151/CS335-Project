@@ -243,6 +243,8 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	t->size = ((*table)[id])->size;
 	t->offset = ((*table)[id])->offset;
 	t->isArray = ((*table)[id])->isArray;
+	t->array_dims = ((*table)[id])->array_dims;
+	t->addr_descriptor = ((*table)[id])->addr_descriptor;
 	// cout<<id<<" "<<((*table)[id])->offset<<" "<<struct_entry->offset<<" "<<struct_entry->size<<"\n";
 	t->next_use = -1;
 	t->heap_mem = 0;
@@ -251,8 +253,6 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 
 	return t;
 }
-
-
 
 string StructAttrType(string struct_name, string id){
 	struct_sym_table* temp = curr_struct_table;
@@ -459,7 +459,6 @@ void printSymbolTable(sym_table* table, string file_name){
   fclose(file);
 }
 
-
 int getStructsize(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
 
@@ -499,5 +498,3 @@ int getSize(string id){
 
   return 4; // for any ptr
 }
-
-
