@@ -258,7 +258,8 @@ void call_func(quad *instr){
     int sz = i;
 
     sym_entry* func_entry = lookup(instr->arg1.first);
-    string ret_type = func_entry->type.substr(5, func_entry->type.length()-5);
+    string ret_type = "";
+    if(func_entry) ret_type = func_entry->type.substr(5, func_entry->type.length()-5);
     
     if(typeLookup(ret_type)){
         // cout<<"HERE\n";
@@ -1157,12 +1158,27 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     if(sym->second->addr_descriptor.reg != "") {
         reg = sym->second->addr_descriptor.reg;
         // If Not temporary, update the value of reg. into memory
-        if(sym->first[0]!='#' && !(sym->second->addr_descriptor.stack || sym->second->addr_descriptor.heap)){
-            cout<<"in getreg\n";
-            sym->second->addr_descriptor.reg = "";
-            string str = get_mem_location(sym, sym2, idx, 1); 
-            code_file << "\tmov " << str << ", " << reg <<endl;
+        // if(sym->first[0]!='#' && !(sym->second->addr_descriptor.stack || sym->second->addr_descriptor.heap)){
+        //     cout<<"in getreg\n";
+        //     sym->second->addr_descriptor.reg = "";
+        //     string str = get_mem_location(sym, sym2, idx, 1); 
+        //     code_file << "\tmov " << str << ", " << reg <<endl;
+        // }
+        vector<qid> temp;
+        for(auto it: reg_desc[reg]){
+            if(it.first[0]!='#' && !(it.second->addr_descriptor.stack || it.second->addr_descriptor.heap)){
+                it.second->addr_descriptor.reg = "";
+                string str = get_mem_location(&it, &empty_var, idx, -1); 
+                it.second->addr_descriptor.stack = 1;
+                code_file << "\tmov " << str << ", " << reg <<endl;
+                temp.push_back(it);
+            }
         }
+        
+        for(auto it: temp){
+            reg_desc[reg].erase(it);
+        }
+        
         return reg;
     }
 
