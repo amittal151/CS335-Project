@@ -69,7 +69,7 @@ extern void print3AC_code();
 %token<num> CONSTANT
 
 %token<str> TYPEDEF EXTERN STATIC AUTO REGISTER
-%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID FILE_IO
 %token<str> STRUCT UNION ENUM ELLIPSIS
 %token<str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
@@ -290,6 +290,7 @@ postfix_expression
 					//for(int i=0;i<tempArgs.size();i++)cout<<tempArgs[i]<<", ";
 					//cout<<"\n";
 					for(int i=0;i<funcArgs.size();i++){
+						cout<<funcArgs[i]<<" "<<tempArgs[i]<<"\n";
 						if(funcArgs[i]=="...")break;
 						if(tempArgs.size()==i){
 							
@@ -1935,25 +1936,41 @@ init_declarator
 				$1->place = qid($1->temp_name, entry);
 				
 				
-				if(entry->isArray || (typeLookup($1->type) && initializer_list_values.size() > 1)){
+				if(entry->isArray || (typeLookup($1->type) && $1->type.substr(0, 7) == "STRUCT_")){
 					// cout<<"HERE @\n";
-					cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
+					// cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
 					// cout<<
 					int i = 0;
 					reverse(initializer_list_values.begin(), initializer_list_values.end());
 					for(qid x: initializer_list_values){
-						cout<<x.first<<" ";
+						// cout<<x.first<<" ";
 						qid temp;
 						temp.first = "array_init";
 						temp.second = new sym_entry;
 						temp.second->offset = entry->offset+i;
-						if($1->type.substr(0,6) == "UNION_") temp.second->offset-=i;
 						temp.second->size = 4;
-						cout<<temp.second->offset<<"\n";
+						// cout<<temp.second->offset<<"\n";
 						i+=4;
 						emit(qid("=", NULL), x, qid("", NULL), temp, -1);
 					}
-					cout<<"\n";
+					// cout<<"\n";
+				}
+				else if(typeLookup($1->type) && !lookup($4->temp_name)){
+					
+					if(initializer_list_values.size() > 1){
+						warning("excess elements in union initializer");
+					}
+					
+					int _size = getSize($1->type);
+					for(int i = 0; i<_size; i+=4){
+						qid temp;
+						temp.first = "union_init";
+						temp.second = new sym_entry;
+						temp.second->offset = entry->offset+i;
+						temp.second->size = 4;
+						cout<<temp.second->offset<<"\n";
+						emit(qid("=", NULL), initializer_list_values[0], qid("", NULL), temp, -1);
+					}
 				}
 				else{
 					assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
@@ -2029,6 +2046,14 @@ type_specifier
 		$$->type = $1;
 	}	
 	| INT			{
+		$$ = makeleaf($1);
+
+		// Semantics
+		if(type == "") type = string($1);
+		else if(!type_delim) type += " " + string($1);
+		$$->type = $1;
+	}
+	| FILE_IO {
 		$$ = makeleaf($1);
 
 		// Semantics

@@ -28,6 +28,10 @@ void gen_data_section(){
     code_file << "extern malloc\n";
     code_file << "extern calloc\n";
     code_file << "extern free\n";
+    code_file << "extern fopen\n";
+    code_file << "extern fclose\n";
+    code_file << "extern fputs\n";
+    code_file << "extern fgets\n";
 }
 
 void starting_code(){

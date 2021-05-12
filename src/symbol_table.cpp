@@ -166,7 +166,23 @@ void insertKeywords(){
 
 	insertSymbol(*curr_table, "free", "FUNC_void", 4, 0, nullptr);
 	type = {"void*"};
-	func_arg.insert({"free", make_pair("FUNC_void", type)});	
+	func_arg.insert({"free", make_pair("FUNC_void", type)});
+
+	insertSymbol(*curr_table, "fopen", "FUNC_FILE*", 4, 0, nullptr);
+	type = {"char*", "char*"};
+	func_arg.insert({"fopen", make_pair("FUNC_FILE*", type)});
+
+	insertSymbol(*curr_table, "fputs", "FUNC_int", 4, 0, nullptr);
+	type = {"char*", "FILE*"};
+	func_arg.insert({"fputs", make_pair("FUNC_int", type)});
+
+	insertSymbol(*curr_table, "fgets", "FUNC_int", 4, 0, nullptr);
+	type = {"char*", "int", "FILE*"};
+	func_arg.insert({"fgets", make_pair("FUNC_int", type)});
+
+	insertSymbol(*curr_table, "fclose", "FUNC_int", 4, 0, nullptr);
+	type = {"FILE*"};
+	func_arg.insert({"fclose", make_pair("FUNC_int", type)});
 }
 
 string getType(string id){

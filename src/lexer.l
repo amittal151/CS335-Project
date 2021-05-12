@@ -51,6 +51,7 @@ extern FILE* lexer_file;
 "goto"			{ if( only_lexer ) fprintf(lexer_file,"GOTO\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(GOTO); }
 "if"			{ if( only_lexer ) fprintf(lexer_file,"IF\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(IF); }
 "int"			{ if( only_lexer ) fprintf(lexer_file,"INT\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(INT); }
+"FILE"			{ if( only_lexer ) fprintf(lexer_file,"FILE\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(FILE_IO); }
 "long"			{ if( only_lexer ) fprintf(lexer_file,"LONG\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(LONG); }
 "register"		{ if( only_lexer ) fprintf(lexer_file,"REGISTER\t\t\t"); yylval.str = strdup(yytext); count(1); return(REGISTER); }
 "return"		{ if( only_lexer ) fprintf(lexer_file,"RETURN\t\t\t"); yylval.str = strdup(yytext); count(1); return(RETURN); }
