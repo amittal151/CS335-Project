@@ -3734,8 +3734,8 @@ int main(int argc, char* argv[]){
 
 		code_file.open("gen_code.asm");
 
-		print3AC_code();
 		genCode();
+		print3AC_code();
 		endAST();
 		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
 	}

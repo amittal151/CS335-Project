@@ -49,4 +49,5 @@ void array_op(quad* instr);
 void goto_op(quad* instr);
 void sizeof_op(quad* instr);
 vector<int> findDeadCode();
+void jumpOptimisation();
 string char_to_int(string sym);

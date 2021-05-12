@@ -1003,16 +1003,17 @@ void genCode(){
     initializeRegs();
     nextUse();
     vector<int> visited = findDeadCode();
+    jumpOptimisation();
 
     gen_data_section();
     starting_code();
 
     int index = 0;
     for (auto it=leaders.begin(); it != leaders.end(); it++){
-       if(!visited[index++]){
-        cout<<it->first<<endl;
-        continue;
-    }
+        if(!visited[index++]){
+            //cout<<it->first<<endl;
+            continue;
+        }
         code_file << it->second <<":\n";
         auto it1 = it;
         it1++;
@@ -1352,19 +1353,30 @@ vector<int> findDeadCode(){
         id++;
     }
 
-    // for(int i=0; i<id; i++){
-    //     cout<<i<<": ";
-    //     for(auto h:adj_list[i]) cout<<"( "<<h<<")"<<", ";
-    //     cout<<endl;
-    // }
-
     dfs(0, visited, adj_list);
 
-    for(int i=0; i<n; i++){
-        cout<<visited[i]<<" ";
-    }
-    cout<<endl;
+    // for(int i=0; i<n; i++){
+    //     cout<<visited[i]<<" ";
+    // }
+    //cout<<endl;
     return visited;
 }
 
+/////jump optimisation
 
+int findDest(int j, int cnt){
+    cout<<"yup"<<endl;
+    if(cnt>200) return j;
+    if((code[j].op.first == "GOTO" && code[j].arg1.first != "IF") && !(j>0 && code[j-1].op.first == "GOTO" && code[j-1].arg1.first == "IF")){
+        return (code[j].idx = findDest(code[j].idx, cnt+1));
+    }
+    return j;
+}
+
+void jumpOptimisation(){
+    for(int i=0; i<(int)code.size(); ++i){
+        if((code[i].op.first == "GOTO" && code[i].arg1.first != "IF") && !(i>0 && code[i-1].op.first == "GOTO" && code[i-1].arg1.first == "IF")){
+            code[i].idx = findDest(code[i].idx, 0);
+        }
+    }
+}
