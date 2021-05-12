@@ -1918,8 +1918,8 @@ init_declarator
 				sym_entry* entry = lookup($1->temp_name);
 				$1->place = qid($1->temp_name, entry);
 				
-				if(!entry->isArray) assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
-				else{
+				
+				if(entry->isArray || (typeLookup($1->type) && initializer_list_values.size() > 1)){
 					// cout<<"HERE @\n";
 					cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
 					// cout<<
@@ -1931,12 +1931,16 @@ init_declarator
 						temp.first = "array_init";
 						temp.second = new sym_entry;
 						temp.second->offset = entry->offset+i;
+						if($1->type.substr(0,6) == "UNION_") temp.second->offset-=i;
 						temp.second->size = 4;
 						cout<<temp.second->offset<<"\n";
 						i+=4;
 						emit(qid("=", NULL), x, qid("", NULL), temp, -1);
 					}
 					cout<<"\n";
+				}
+				else{
+					assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
 				}
 				
 				$$->place = $1->place;

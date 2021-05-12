@@ -26,6 +26,8 @@ void gen_data_section(){
     code_file << "extern printf\n";
     code_file << "extern scanf\n";
     code_file << "extern malloc\n";
+    code_file << "extern calloc\n";
+    code_file << "extern free\n";
 }
 
 void starting_code(){
@@ -922,8 +924,8 @@ void array_op(quad* instr){
             else code_file<<"\timul "<<reg1<<", "<<1*instr->arg1.second->array_dims[0]<<"\n";
         }
         else{
-            if(instr->arg1.second->array_dims.empty()) code_file<<"\timul "<<reg1<<", "<<4<<"\n";
-            else code_file<<"\timul "<<reg1<<", "<<4*instr->arg1.second->array_dims[0]<<"\n";
+            if(instr->arg1.second->array_dims.empty()) code_file<<"\timul "<<reg1<<", "<<getSize(instr->res.second->type)<<"\n";
+            else code_file<<"\timul "<<reg1<<", "<<getSize(instr->res.second->type)*instr->arg1.second->array_dims[0]<<"\n";
         }
        
         code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";

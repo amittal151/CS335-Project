@@ -158,11 +158,15 @@ void insertKeywords(){
 
 	insertSymbol(*curr_table, "malloc", "FUNC_void*", 4, 0, nullptr);
 	type = {"int"};
-	func_arg.insert({"malloc", make_pair("FUNC_void*", type)});	
+	func_arg.insert({"malloc", make_pair("FUNC_void*", type)});
 
-	// insertSymbol(*curr_table, "free", "FUNC_void", 4, 0, nullptr);
-	// type = {""};
-	// func_arg.insert({"free", make_pair("FUNC_void", type)});	
+	insertSymbol(*curr_table, "calloc", "FUNC_void*", 4, 0, nullptr);
+	type = {"int", "int"};
+	func_arg.insert({"calloc", make_pair("FUNC_void*", type)});	
+
+	insertSymbol(*curr_table, "free", "FUNC_void", 4, 0, nullptr);
+	type = {"void*"};
+	func_arg.insert({"free", make_pair("FUNC_void", type)});	
 }
 
 string getType(string id){
