@@ -46,7 +46,30 @@ int is_integer(string sym){
 }
 
 
-void add_op(quad* instr){
+int is_pointerType(string type){
+    if(type[type.length() - 1] == '*'){
+        return 1;
+    }
+    return 0;
+}
+
+
+int give_size(sym_entry* entry){
+    // This function is used for pointers
+    // Returns the size of variable to which pointer is pointing to
+    vector<int> v = entry->array_dims;
+    if(!v.empty()){
+        // Array pointer
+        return v[0]*4;
+    }
+    if(entry->size_of_pointed > 0) return entry->size_of_pointed;
+    
+    return 4;
+}
+
+//----------------------------------------------------- Arithmetic Operators ----------------------------------------------------//
+
+void add_op(quad* instr){   // +
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) + stoi(instr->arg2.first));
         string str = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
@@ -61,18 +84,32 @@ void add_op(quad* instr){
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
             code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
         }
+        if(is_pointerType(instr->arg1.second->type) && !is_pointerType(instr->arg2.second->type)){
+            int size = give_size(instr->arg1.second);
+            exclude_this.insert(reg1);
+            string temp_reg = getTemporaryReg(&instr->arg2, instr->idx);
+            exclude_this.erase(reg1);
+            code_file << "\tmov "<<temp_reg << ", "<< mem2<<"\n";
+            code_file << "\timul "<<temp_reg << ", "<< size<<"\n";
+            mem2 = temp_reg;
+        }
+        else if(!is_pointerType(instr->arg1.second->type) && is_pointerType(instr->arg2.second->type) ){
+            int size = give_size(instr->arg1.second);
+            code_file << "\timul "<<reg1 << ", "<< size<<"\n";
+        }
+
         code_file << "\tadd " << reg1 << ", " << mem2 <<endl;
         update_reg_desc(reg1, &instr->res);
     }
 }
 
-void sub_op(quad* instr){
+void sub_op(quad* instr){   // -
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) - stoi(instr->arg2.first));
         string str = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
         code_file << "\tmov " << str <<", " << "dword "<< val << "\n";
     }
-    else{
+    else{        
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
         string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);    // reg - mem - [ reg_temp ]
         
@@ -80,6 +117,19 @@ void sub_op(quad* instr){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
             code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+        }
+        if(is_pointerType(instr->arg1.second->type) && !is_pointerType(instr->arg2.second->type)){
+            int size = give_size(instr->arg1.second);
+            exclude_this.insert(reg1);
+            string temp_reg = getTemporaryReg(&instr->arg2, instr->idx);
+            exclude_this.erase(reg1);
+            code_file << "\tmov "<<temp_reg << ", "<< mem2<<"\n";
+            code_file << "\timul "<<temp_reg << ", "<< size<<"\n";
+            mem2 = temp_reg;
+        }
+        else if(!is_pointerType(instr->arg1.second->type) && is_pointerType(instr->arg2.second->type) ){
+                int size = give_size(instr->arg2.second);
+                code_file << "\timul "<<reg1 << ", "<< size<<"\n";
         }
         code_file << "\tsub " << reg1 << ", " << mem2 <<endl;
         update_reg_desc(reg1, &instr->res);
@@ -824,6 +874,7 @@ void pointer_op(quad* instr){
             if(reg_desc.find(mem) != reg_desc.end()) mem =  get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
         }
+        instr->res.second->size_of_pointed = instr->arg1.second->size;
         pointed_by[instr->arg1.second->offset] = 0;
         addr_pointed_to[instr->res] = instr->arg1.second->offset;
         update_reg_desc(reg, &instr->res);

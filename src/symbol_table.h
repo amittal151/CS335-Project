@@ -23,6 +23,7 @@ typedef struct sym_entry{
 	int next_use = -1;
 	int is_derefer = 0;
 	int isArray = 0;
+	int size_of_pointed = 0;
 
 	vector<int> array_dims;
 	string storage_class;
