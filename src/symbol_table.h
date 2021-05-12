@@ -90,3 +90,4 @@ void paramInsert(sym_table& table, string id, string type, int size, bool is_ini
 int func_local_size(string name); // returns bytes required for local variables in a function
 sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var);
 int getStructsize(string struct_name);
+void insert_imp_func(string func_name, vector<string> type, string ret_type);

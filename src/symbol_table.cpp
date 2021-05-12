@@ -23,6 +23,7 @@ int struct_count = 1;
 int avl=0;
 extern int isArray;
 extern vector<int> array_dims;
+extern map<string, int> func_usage_map;
 
 int blockCnt = 1;
 
@@ -150,39 +151,54 @@ void insertKeywords(){
 	}
 	
 	// Insert imp functions
-	insertSymbol(*curr_table, "printf", "FUNC_int", 4, 0, nullptr);
 	vector<string> type = {"char*", "..."};
-	func_arg.insert({"printf", make_pair("FUNC_int",type) });
-	insertSymbol(*curr_table, "scanf", "FUNC_int", 4, 0, nullptr);
-	func_arg.insert({"scanf", make_pair("FUNC_int",type)});
 
-	insertSymbol(*curr_table, "malloc", "FUNC_void*", 4, 0, nullptr);
+	insert_imp_func("printf", type, "int");
+
+	insert_imp_func("scanf", type, "int");
+
+
+	// dynamic alloc functions
 	type = {"int"};
-	func_arg.insert({"malloc", make_pair("FUNC_void*", type)});
+	insert_imp_func("malloc", type, "void*");
 
-	insertSymbol(*curr_table, "calloc", "FUNC_void*", 4, 0, nullptr);
 	type = {"int", "int"};
-	func_arg.insert({"calloc", make_pair("FUNC_void*", type)});	
+	insert_imp_func("calloc", type, "void*");
 
-	insertSymbol(*curr_table, "free", "FUNC_void", 4, 0, nullptr);
 	type = {"void*"};
-	func_arg.insert({"free", make_pair("FUNC_void", type)});
+	insert_imp_func("free", type, "void");
 
-	insertSymbol(*curr_table, "fopen", "FUNC_FILE*", 4, 0, nullptr);
+
+	// FILE I/O functions
 	type = {"char*", "char*"};
-	func_arg.insert({"fopen", make_pair("FUNC_FILE*", type)});
+	insert_imp_func("fopen", type, "FILE*");
 
-	insertSymbol(*curr_table, "fputs", "FUNC_int", 4, 0, nullptr);
 	type = {"char*", "FILE*"};
-	func_arg.insert({"fputs", make_pair("FUNC_int", type)});
+	insert_imp_func("fputs", type, "int");
 
-	insertSymbol(*curr_table, "fgets", "FUNC_int", 4, 0, nullptr);
 	type = {"char*", "int", "FILE*"};
-	func_arg.insert({"fgets", make_pair("FUNC_int", type)});
+	insert_imp_func("fgets", type, "int");
 
-	insertSymbol(*curr_table, "fclose", "FUNC_int", 4, 0, nullptr);
 	type = {"FILE*"};
-	func_arg.insert({"fclose", make_pair("FUNC_int", type)});
+	insert_imp_func("fclose", type, "int");
+
+	type = {"FILE*", "char*", "..."};
+	insert_imp_func("fprintf", type, "int");
+
+	type = {"FILE*", "char*", "..."};
+	insert_imp_func("fscanf", type, "int");
+
+	type = {"FILE*"};
+	insert_imp_func("fgetc", type, "char");
+
+	type = {"char", "FILE*"};
+	insert_imp_func("fputc", type, "char");
+}
+
+void insert_imp_func(string func_name, vector<string> type, string ret_type){
+	insertSymbol(*curr_table, func_name, "FUNC_"+ret_type, 4, 0, nullptr);
+	func_arg.insert({func_name, make_pair("FUNC_"+ret_type, type)});
+	func_usage_map.insert({func_name, 0});
 }
 
 string getType(string id){

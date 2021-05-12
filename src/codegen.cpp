@@ -17,21 +17,16 @@ qid empty_var("", NULL);
 
 extern vector<quad> code;
 extern ofstream code_file;
+extern map<string, int> func_usage_map;
 
 string get_label(){
     return "L" +to_string(label_counter++);
 }
 
 void gen_data_section(){
-    code_file << "extern printf\n";
-    code_file << "extern scanf\n";
-    code_file << "extern malloc\n";
-    code_file << "extern calloc\n";
-    code_file << "extern free\n";
-    code_file << "extern fopen\n";
-    code_file << "extern fclose\n";
-    code_file << "extern fputs\n";
-    code_file << "extern fgets\n";
+    for(auto it: func_usage_map){
+        if(it.second) code_file << "extern "<<it.first<<"\n";
+    }
 }
 
 void starting_code(){
@@ -402,6 +397,8 @@ string char_to_int(string sym){
         string s = sym.substr(1,2);
         //cout<<s<<"\n";
         if(s == "\\0") return "0";
+        if(s == "\\n") return "10";
+        if(s == "\\t") return "9";
         // TODO
     } 
     int val = (int )sym[1];
@@ -431,7 +428,7 @@ void assign_op(quad* instr){
     else if(is_integer(instr->arg1.first)){
         // string reg = getReg(instr->res, qid("", NULL), qid("", NULL), instr->idx);
         string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
-        code_file << "\tmov "<< mem << ", dword "<< stoi(instr->arg1.first) <<endl;
+        code_file << "\tmov "<< mem << ", dword "<< instr->arg1.first <<endl;
         //nstr->res.second->addr_descriptor.stack = 0;
     }
     else if(typeLookup(instr->res.second->type)){

@@ -42,6 +42,7 @@ int stop_compiler = 0;
 int isArray = 0;	// true when array is declared
 int type_delim = 0;
 vector<qid> initializer_list_values;
+map<string, int> func_usage_map;
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -252,6 +253,10 @@ postfix_expression
 						currArgs.pop_back();
 						//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
 						$$->place = q;
+
+						if(func_usage_map.find($1->temp_name) != func_usage_map.end()){
+							func_usage_map[$1->temp_name] = 1;
+						}
 					}
 				}
 			}
@@ -290,7 +295,7 @@ postfix_expression
 					//for(int i=0;i<tempArgs.size();i++)cout<<tempArgs[i]<<", ";
 					//cout<<"\n";
 					for(int i=0;i<funcArgs.size();i++){
-						cout<<funcArgs[i]<<" "<<tempArgs[i]<<"\n";
+						// cout<<funcArgs[i]<<" "<<tempArgs[i]<<"\n";
 						if(funcArgs[i]=="...")break;
 						if(tempArgs.size()==i){
 							
@@ -304,10 +309,12 @@ postfix_expression
 						}
 						else if(msg.empty()){
 							yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
+							$$->is_error = 1;
 							break;
 						}
 						if(i==funcArgs.size()-1 && i<tempArgs.size()-1){
 							yyerror(("Too many Arguments to Function " + $1->temp_name).c_str());
+							$$->is_error = 1;
 							break;
 						}
 
@@ -315,17 +322,20 @@ postfix_expression
 
 
 					//--3AC
+					if(!$$->is_error){
+						qid q = newtemp($$->type);
+						$$->place = q;
+						$$->nextlist.clear();
 
-					qid q = newtemp($$->type);
-					$$->place = q;
-					$$->nextlist.clear();
+						// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
+						//cout<<"----"<< $$->temp_name<<endl ;
+						emit(qid("CALL", NULL), qid($1->temp_name,NULL), qid(to_string(currArgs.back().size()), NULL), q, -1);
+						currArgs.pop_back();
 
-					// emit(qid("refParam", NULL), qid("", NULL), qid("", NULL), q, -1);
-					//cout<<"----"<< $$->temp_name<<endl ;
-					emit(qid("CALL", NULL), qid($1->temp_name,NULL), qid(to_string(currArgs.back().size()), NULL), q, -1);
-					currArgs.pop_back();
-					//if(currArgs.size()>1)currArgs.back().push_back($$->type) ;
-					//DOUBT size() or size()+1?
+						if(func_usage_map.find($1->temp_name) != func_usage_map.end()){
+							func_usage_map[$1->temp_name] = 1;
+						}
+					}
 
 				}
 			}
@@ -3778,8 +3788,8 @@ int main(int argc, char* argv[]){
 
 		code_file.open("gen_code.asm");
 
-		genCode();
 		print3AC_code();
+		genCode();
 		endAST();
 		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
 	}
