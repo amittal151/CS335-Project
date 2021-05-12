@@ -25,7 +25,7 @@ int block_count = 0;
 stack<int> block_stack;
 bool fn_decl = 0;
 int func_flag = 0;
-
+string structTemp ="";
 string type = "";
 int Anon_StructCounter=0;
 vector<string> funcArgs;
@@ -2129,7 +2129,7 @@ struct_or_union_specifier
 		$$ = makenode($1, v);
 
 		// Semantics
-
+		structTemp = structName ; 
 		if(typeLookup(string($1) + "_" + string($2))){
 			$$->type = string($1) + "_" + string($2);
 			// if(type == ""){
@@ -2142,6 +2142,7 @@ struct_or_union_specifier
 		}
 		else if(structName == string($2)){
 			// We are inside a struct
+			
 			structName = string($1) + "_" + structName;
 			type = "#INSIDE";
 		}
@@ -2155,8 +2156,10 @@ struct_or_union_specifier
 
 G 	
 	: IDENTIFIER 	{
+
 		$$ = $1;
 		structName = $1;
+		structTemp = structName ; 
 	}
 
 
@@ -2196,6 +2199,8 @@ struct_declaration
 		$$ = makenode("struct_declaration", v);
 
 		type = "";
+		structName = structTemp;
+		//structTemp = "";
 		type_delim = 0;
 		$$->is_error = $1->is_error || $2->is_error;
 	}
