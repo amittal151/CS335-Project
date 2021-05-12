@@ -34,6 +34,7 @@ vector<vector<string> > currArgs(1,vector<string>() );
 vector<int> array_dims;
 
 int if_found = 0;
+int previous_if_found = 0;
 map<string, vector<int>> gotolablelist;
 map<string, int> gotolabel;
 string storage_class = "";
@@ -1511,6 +1512,7 @@ logical_and_expression
 
 			// 3AC
 			if($3->truelist.empty() && if_found){
+				backpatch($3->nextlist, code.size());
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1539,6 +1541,7 @@ GOTO_AND
 		
 		if(!$1->is_error){
 			if($1->truelist.empty() && if_found){
+				backpatch($1->nextlist, code.size());
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1568,6 +1571,7 @@ logical_or_expression
 			// 3AC
 
 			if($3->truelist.empty() && if_found){
+				backpatch($3->nextlist, code.size());
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1595,6 +1599,7 @@ GOTO_OR
 		$$ = $1;
 		if(!$1->is_error){
 			if($1->truelist.empty() && if_found){
+				backpatch($1->nextlist, code.size());
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -1621,6 +1626,9 @@ conditional_expression
 
 		if(!$1->is_error && !$3->is_error && !$7->is_error){
 			if(!temp.empty()){
+
+				if_found = previous_if_found;
+
 				$$->type = "int";
 
 				if($1->intVal) $$->intVal = $3->intVal;
@@ -1633,6 +1641,8 @@ conditional_expression
 				backpatch($1->truelist, $2);
 				backpatch($1->falselist, $6);
 				backpatch($3->nextlist, $4-1);
+				backpatch($3->truelist, $4-1);
+				backpatch($3->falselist, $4-1);
 
 				code[$4-1].arg1 = $3->place;
 				code[$4-1].res = temp1;
@@ -1642,6 +1652,9 @@ conditional_expression
 				
 				//$$->nextlist = $7->nextlist;
 				backpatch($7->nextlist, code.size());
+				backpatch($7->falselist, code.size());
+				backpatch($7->truelist, code.size());
+
 				// ????
 
 				emit(qid("=", lookup("=")), $7->place, qid("", NULL), temp1, -1);
@@ -1666,9 +1679,12 @@ conditional_expression
 
 GOTO_COND
 	: logical_or_expression '?' {
+		previous_if_found = if_found;
+		if_found = 0;
 		$$ = $1;
 		if(!$1->is_error){
 			if($1->truelist.empty()){
+				backpatch($1->nextlist, code.size());
 				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
 				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
@@ -3096,6 +3112,7 @@ IF_CODE
     : IF {if_found = 1;} '(' expression ')' {
         if($4->truelist.empty() && $4->falselist.empty()) {
             int a = code.size();
+			backpatch($4->nextlist, a);
             emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
@@ -3175,6 +3192,7 @@ EXPR_CODE
     : {if_found = 1;} expression {
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
+			backpatch($2->nextlist, a);
             emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
@@ -3190,6 +3208,7 @@ EXPR_STMT_CODE
     : {if_found = 1;} expression_statement { 
 		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
+			backpatch($2->nextlist, a);
             emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
             emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);

@@ -328,6 +328,32 @@ void call_func(quad *instr){
             code_file<<"\tpush str"<<string_counter<<"\n";
             string_counter++;
         }
+        else if(typeLookup(params.top().second->type)){
+            int type_size = getSize(params.top().second->type), type_offset = params.top().second->offset;
+            if(params.top().second->is_derefer) {
+                string reg = getReg(&params.top(), &empty_var, &empty_var, instr->idx);
+                cout<<"HEEEEELPPPP MEEEEEEEEE\n";
+                for(int i = type_size - 4; i>=0; i-=4){
+                    code_file<<"\tpush dword [ "<<reg<<" + "<<i<<" ]\n";
+                }
+            }
+            else {
+                if(type_offset > 0){
+                    for(int i = type_offset; i<type_size + type_offset; i+=4){
+                        code_file<<"\tpush dword [ ebp - "<<i+4<<" ]\n";
+                    }
+                }
+                else{
+                    for(int i = 0; i<type_size; i+=4){
+                        code_file<<"\tpush dword [ ebp + "<<abs(type_offset+i)<<" ]\n";
+                    }
+                }
+                    // for(int i = 0; i<type_size; i+=4){
+                    //     int curr_offset = 
+                    // }
+                    // cout<<type_size<<" "<<type_offset<<"\n";
+            }
+        }
         else if(params.top().second->is_derefer){
             string mem;
             mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
@@ -338,23 +364,6 @@ void call_func(quad *instr){
             string str = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
             code_file<<"\tlea eax, "<< str <<"\n";
             code_file<<"\tpush eax\n";
-        }
-        else if(typeLookup(params.top().second->type)){
-            int type_size = getSize(params.top().second->type), type_offset = params.top().second->offset;
-            if(type_offset > 0){
-                for(int i = type_offset; i<type_size + type_offset; i+=4){
-                    code_file<<"\tpush dword [ ebp - "<<i+4<<" ]\n";
-                }
-            }
-            else{
-                for(int i = 0; i<type_size; i+=4){
-                    code_file<<"\tpush dword [ ebp + "<<abs(type_offset+i)<<" ]\n";
-                }
-            }
-                // for(int i = 0; i<type_size; i+=4){
-                //     int curr_offset = 
-                // }
-                // cout<<type_size<<" "<<type_offset<<"\n";
         }
         else{
             // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
@@ -699,7 +708,8 @@ void logic_and(quad *instr){
             code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
         }
 
-        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+        // exclude_this.insert(reg);
+        string mem2 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
     
         code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
         code_file << "\tje "<<l1<<"\n";
@@ -738,7 +748,7 @@ void logic_or(quad *instr){
             code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
         }
 
-        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+        string mem2 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
 
         code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
         code_file << "\tjne "<<l1<<"\n";
