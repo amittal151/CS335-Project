@@ -16,9 +16,6 @@ void freeDeadTemp(int idx);
 string get_mem_location(qid* sym, qid* sym2, int idx, int flag);
 string getTemporaryReg(qid* sym, int idx);
 string getReg(qid* sym, qid* result, qid* sym2, int idx);
-// string arg1_getReg(qid* arg1, qid* arg2, int idx);
-// string arg2_getMem(qid* arg2, qid* arg1, int flag);
-// string lvalue_getReg(qid* arg1, qid* arg2, int idx);
 
 void nextUse();
 int is_integer(string sym);

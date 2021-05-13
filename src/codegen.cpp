@@ -1,18 +1,19 @@
 #include "codegen.h"
 #include "3ac.h"
-map<string, set<qid> > reg_desc;
-map<int ,string> leaders; 
-stack<qid>  params; // stores the parameters as soon as we encounter first param
-map<int, string> stringlabels;
-map<int, int> pointed_by; 
-map<qid, int> addr_pointed_to;
 
-int string_counter = 0; 
-int label_counter = 0;
+map<string, set<qid> > reg_desc;    // map containing the registers and their stored variables
+map<int ,string> leaders;           // store leaders of basic blocks 
+stack<qid>  params;                 // stores the parameters to be passed in a function call
+map<int, string> stringlabels;      // maps labels to its string
+map<int, int> pointed_by;           // store whether a variable is pointers by a pointer
+map<qid, int> addr_pointed_to;      // stores the address a pointer is pointing to
+
+int string_counter = 0;             // keep count of string labels generated
+int label_counter = 0;              // keep count of leader labels generated
 int arg_size = 0;
-int in_func = 0;
+int in_func = 0;                    // true when we are inside a function definiton
 
-set<string> exclude_this;
+set<string> exclude_this;           // to exclude certain registers from a getReg call
 
 qid empty_var("", NULL);
 
@@ -38,6 +39,7 @@ void starting_code(){
     code_file << "\tglobal main\n";
 }
 
+// checks whether a string is an integer or not
 int is_integer(string sym){
     for(int i=0; i<sym.length(); i++){
         if(sym[i] >= '0' && sym[i]<='9'){
@@ -48,7 +50,6 @@ int is_integer(string sym){
     return 1;
 }
 
-
 int is_pointerType(string type){
     if(type[type.length() - 1] == '*'){
         return 1;
@@ -56,10 +57,9 @@ int is_pointerType(string type){
     return 0;
 }
 
-
+// This function is used for pointers
+// Returns the size of variable to which pointer is pointing to
 int give_size(sym_entry* entry){
-    // This function is used for pointers
-    // Returns the size of variable to which pointer is pointing to
     vector<int> v = entry->array_dims;
     if(!v.empty()){
         // Array pointer
@@ -72,7 +72,8 @@ int give_size(sym_entry* entry){
 
 //----------------------------------------------------- Arithmetic Operators ----------------------------------------------------//
 
-void add_op(quad* instr){   // +
+// addtion operation
+void add_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) + stoi(instr->arg2.first));
         string str = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
@@ -80,13 +81,14 @@ void add_op(quad* instr){   // +
     }
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);    // reg - mem - [ reg_temp ]
-        //free_reg(reg1);
+        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+
         if(instr->arg1.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
             code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
         }
+        
         if(is_pointerType(instr->arg1.second->type) && !is_pointerType(instr->arg2.second->type)){
             int size = give_size(instr->arg1.second);
             exclude_this.insert(reg1);
@@ -106,7 +108,8 @@ void add_op(quad* instr){   // +
     }
 }
 
-void sub_op(quad* instr){   // -
+// subtraction operation
+void sub_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) - stoi(instr->arg2.first));
         string str = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
@@ -114,13 +117,14 @@ void sub_op(quad* instr){   // -
     }
     else{        
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);    // reg - mem - [ reg_temp ]
+        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
         
         if(instr->arg1.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
             code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
         }
+
         if(is_pointerType(instr->arg1.second->type) && !is_pointerType(instr->arg2.second->type)){
             int size = give_size(instr->arg1.second);
             exclude_this.insert(reg1);
@@ -134,11 +138,13 @@ void sub_op(quad* instr){   // -
                 int size = give_size(instr->arg2.second);
                 code_file << "\timul "<<reg1 << ", "<< size<<"\n";
         }
+
         code_file << "\tsub " << reg1 << ", " << mem2 <<endl;
         update_reg_desc(reg1, &instr->res);
     }
 }
 
+// multiplicative operation
 void mul_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) * stoi(instr->arg2.first));
@@ -147,7 +153,7 @@ void mul_op(quad* instr){
     }
     else{
         string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);    // reg - mem - [ reg_temp ]
+        string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
         
         if(instr->arg1.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
@@ -159,9 +165,11 @@ void mul_op(quad* instr){
     }
 }
 
+
+// CHECK
+// divison operation
 void div_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-        // TODO check  div by zero
         int val = (stoi(instr->arg1.first) / stoi(instr->arg2.first));
         string str = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
         code_file << "\tmov " << str <<", " << "dword "<< val << "\n";
@@ -186,9 +194,7 @@ void div_op(quad* instr){
 
         code_file<<"\tcdq\n";
         code_file<<"\tidiv "<<reg2<<"\n";
-        // if(reg_desc.find(instr->res.second->addr_descriptor.reg) != reg_desc.end()){
-        //     reg_desc[instr->res.second->addr_descriptor.reg].erase(instr->res);
-        // }
+
         instr->res.second->addr_descriptor.reg = "eax";
         reg_desc["eax"].clear();
         reg_desc["edx"].clear();
@@ -196,6 +202,7 @@ void div_op(quad* instr){
     }
 }
 
+// modulo operation
 void mod_op(quad* instr){
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = (stoi(instr->arg1.first) % stoi(instr->arg2.first));
@@ -225,484 +232,10 @@ void mod_op(quad* instr){
     }
 }
 
-void return_op(quad* instr){
-    // return a;
-    if(instr->arg1.first != ""){
-        // clear_regs();
-        if(typeLookup(instr->arg1.second->type)){
-            
-            for(auto it: reg_desc){
-                free_reg(it.first);
-            }
 
-            string reg1 = getTemporaryReg(&empty_var, instr->idx);
-            
-            exclude_this.insert(reg1);
-            string reg2 = getTemporaryReg(&empty_var, instr->idx);
-            exclude_this.clear();
-            
-            code_file<<"\tmov "<<reg1<<", [ ebp + "<<arg_size<<" ]\n";
-            
-            int struct_size = getStructsize(instr->arg1.second->type);
-            int struct_offset = instr->arg1.second->offset;
-            // sym_table* struct_table = typeTable(instr->arg1.second->type);
-            if(instr->arg1.second->offset < 0){
-                for(int i = 0; i<struct_size; i+=4){
-                    code_file<<"\tmov "<<reg2<<", [ ebp + "<<abs(struct_offset) - i<<" ]\n";
-                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
-                }
-            }
-            else{
-                cout<<struct_size<<" "<<struct_offset<<" HERE\n";
-                for(int i = 0; i<struct_size; i+=4){
-                    code_file<<"\tmov "<<reg2<<", [ ebp - "<<struct_offset + 4 + i<<" ]\n";
-                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
-                }
-            }
-            code_file<<"\tleave\n";
-            code_file<<"\tret\n";
-        }
-        else{
-            string mem = get_mem_location(&instr->arg1, &empty_var, instr->idx, 1);
-            if(mem != "eax") code_file<<"\tmov eax, "<<mem<<"\n";
-            code_file<<"\tleave\n";
-            code_file<<"\tret\n";
-        }
-    }
-    else{
-        // clear_regs();
-        code_file<<"\txor eax, eax\n";
-        code_file<<"\tleave\n";
-        code_file<<"\tret\n";
-    }
-}
+//----------------------------------------------------- Conditional Operators----------------------------------------------------//
 
-void clear_regs(){
-    for(auto reg = reg_desc.begin(); reg != reg_desc.end(); reg++){
-        reg->second.clear();
-    }
-}
-
-
-// free a specific register
-// eg for div we need eax, edx
-
-// reg - a, mem
-
-void free_reg(string reg){
-    // code_file<<"reg: "<<reg<<"\n";
-    for(auto sym: reg_desc[reg]){
-        if(is_integer(sym.first)) continue;
-        sym.second->addr_descriptor.reg = "";
-        string str = get_mem_location(&sym, &empty_var, -1, -1);
-        code_file<<"\tmov "<< str <<", "<<reg<<"\n";
-        // code_file<<"; "<<sym.first<<"\n";
-    }
-    // code_file<<"\n";
-    reg_desc[reg].clear();
-}
-
-void call_func(quad *instr){
-
-    for(auto it: reg_desc){
-        free_reg(it.first);
-    }
-
-    int curr_reg = 0;
-    int i = stoi(instr->arg2.first);
-    int sz = i;
-
-    sym_entry* func_entry = lookup(instr->arg1.first);
-    string ret_type = "";
-    if(func_entry) ret_type = func_entry->type.substr(5, func_entry->type.length()-5);
-    
-    if(typeLookup(ret_type)){
-        // cout<<"HERE\n";
-        code_file<<"\tlea eax, "<<get_mem_location(&instr->res, &empty_var, -1, -1)<<"\n";
-        code_file<<"\tpush eax\n";
-    }
-
-    while(i>0){
-        // free_reg(func_regs[curr_reg]);
-        if(params.top().first[0] == '\"'){
-            
-            stringlabels.insert({string_counter, params.top().first});
-            // code_file<<"\tmov "<<func_regs[curr_reg]<<", str"<<string_counter<<"\n";
-            code_file<<"\tpush str"<<string_counter<<"\n";
-            string_counter++;
-        }
-        else if(typeLookup(params.top().second->type)){
-            int type_size = getSize(params.top().second->type), type_offset = params.top().second->offset;
-            if(params.top().second->is_derefer) {
-                string reg = getReg(&params.top(), &empty_var, &empty_var, instr->idx);
-                cout<<"HEEEEELPPPP MEEEEEEEEE\n";
-                for(int i = type_size - 4; i>=0; i-=4){
-                    code_file<<"\tpush dword [ "<<reg<<" + "<<i<<" ]\n";
-                }
-            }
-            else {
-                if(type_offset > 0){
-                    for(int i = type_offset; i<type_size + type_offset; i+=4){
-                        code_file<<"\tpush dword [ ebp - "<<i+4<<" ]\n";
-                    }
-                }
-                else{
-                    for(int i = 0; i<type_size; i+=4){
-                        code_file<<"\tpush dword [ ebp + "<<abs(type_offset+i)<<" ]\n";
-                    }
-                }
-                    // for(int i = 0; i<type_size; i+=4){
-                    //     int curr_offset = 
-                    // }
-                    // cout<<type_size<<" "<<type_offset<<"\n";
-            }
-        }
-        else if(params.top().second->is_derefer){
-            string mem;
-            mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
-
-            code_file<<"\tpush dword "<<mem<<"\n";
-        }
-        else if(params.top().second->isArray){
-            string str = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
-            code_file<<"\tlea eax, "<< str <<"\n";
-            code_file<<"\tpush eax\n";
-        }
-        else{
-            // code_file<<"\tmov "<<func_regs[curr_reg]<<", "<<get_mem_location(&it, 1)<<"\n";
-            string mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
-            
-            if(reg_desc.find(mem) == reg_desc.end() && mem.substr(0,5) != "dword") mem = "dword "+mem;
-            code_file<<"\tpush "<<mem<<"\n";
-            
-        }
-        i--;
-        params.pop();
-        // curr_reg++;
-    }
-    
-    code_file<<"\tcall "<<instr->arg1.first<<"\n";
-    
-    // Clear args from stack
-    
-    if(!typeLookup(ret_type)){
-        reg_desc["eax"].insert(instr->res);
-        instr->res.second->addr_descriptor.reg = "eax";
-    }
-    else sz++;
-
-    code_file<<"\tadd esp, "<<4*sz<<"\n";
-}
-
-string char_to_int(string sym){
-    if(sym[0]!='\'')return sym;
-    if(sym[1] == '\\'){
-        //cout<<"HERE\n";
-        string s = sym.substr(1,2);
-        //cout<<s<<"\n";
-        if(s == "\\0") return "0";
-        if(s == "\\n") return "10";
-        if(s == "\\t") return "9";
-        // TODO
-    } 
-    int val = (int )sym[1];
-    sym = to_string(val);
-    return sym;
-}
-
-
-void assign_op(quad* instr){
-    if(!in_func){
-        cout<<instr->res.first<<"\n";
-        if(instr->res.first == "array_init") return;
-        globaldecl[instr->res.first].first = instr->arg1.first;
-        return;
-    }
-    instr->arg1.first = char_to_int(instr->arg1.first);
-    // x = 1
-    if(instr->res.second->is_derefer){
-        cout<<"I am here"<<endl;
-        string res_mem = getReg(&instr->res, &empty_var, &instr->arg1, -1);
-        string arg1_mem = getReg(&instr->arg1, &empty_var, &instr->res, -1);
-        res_mem = "[ " + res_mem + " ]";
-
-        if(instr->arg1.second->is_derefer){
-            code_file<<"\tmov "<<arg1_mem <<", [ "<<arg1_mem<<" ]"<<"\n";
-        }
-        // cout<<"I am here 2 "<<endl;
-        code_file<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
-        //cout<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
-        // cout<<"I am here 3 "<<endl;
-    }
-    else if(is_integer(instr->arg1.first)){
-        // string reg = getReg(instr->res, qid("", NULL), qid("", NULL), instr->idx);
-        string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
-        if(reg_desc.find(mem) != reg_desc.end()){
-            free_reg(mem);
-            update_reg_desc(mem, &instr->res);
-        }
-        code_file << "\tmov "<< mem << ", dword "<< instr->arg1.first <<endl;
-        //nstr->res.second->addr_descriptor.stack = 0;
-    }
-    else if(typeLookup(instr->res.second->type)){
-        
-        for(auto it: reg_desc){
-            free_reg(it.first);
-        }
-
-        string reg = getTemporaryReg(&empty_var, instr->idx);
-        int res_offset = instr->res.second->offset, temp_offset = instr->arg1.second->offset;
-        int struct_size = getStructsize(instr->res.second->type);
-        
-        for(int i = 0; i<struct_size; i+=4){
-            code_file<<"\tmov "<<reg<<", [ ebp - "<<temp_offset + 4 + i<<" ]\n";
-            code_file<<"\tmov [ ebp - "<<res_offset + 4 + i<<" ], "<<reg<<"\n";
-        }
-    } 
-    // x = y
-    else{
-        string reg = getReg(&instr->arg1, &instr->res, &empty_var, instr->idx);
-        if(instr->arg1.second->is_derefer){
-            code_file<<"\tmov "<<reg <<", [ "<<reg<<" ]"<<"\n";
-            update_reg_desc(reg, &instr->res);        
-        }
-        else {
-            // update_reg_desc(reg, &instr->res);        // since reg will still hold y's value, keep y in reg
-            reg_desc[reg].insert(instr->res);
-            string prev_reg = instr->res.second->addr_descriptor.reg;
-            if(prev_reg != "") reg_desc[prev_reg].erase(instr->res);
-            instr->res.second->addr_descriptor.reg = reg;
-            cout<<"HERE !! "<<reg<<" "<<instr->res.first<<"\n";
-        }
-        if(instr->res.first=="array_init"){
-            string tem = get_mem_location(&instr->res,&empty_var,instr->idx,-1);
-            code_file << "\tmov " << tem << ", " << reg << "\n";
-            free_reg(reg);
-        }
-
-        if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
-            pointed_by[addr_pointed_to[instr->arg1]] = 1;
-        }
-
-        if(pointed_by[instr->res.second->offset]){
-            string reg_stored = instr->res.second->addr_descriptor.reg;
-            instr->res.second->addr_descriptor.reg = "";
-            reg_desc[reg_stored].erase(instr->res);
-            string str = get_mem_location(&instr->res, &instr->arg1, instr->idx, 0);
-            code_file<<"\tmov "<< str <<", "<<reg_stored<<"\n";
-        }
-        instr->res.second->addr_descriptor.stack = 0;
-    }
-}
-
-void gen_func_label(quad* instr){
-    string s = "";
-    for(int i=5;i<instr->op.first.size(); i++){
-        if(instr->op.first[i] == ' ')break;
-        s += instr->op.first[i];
-    }
-    // string name = "";
-    // // for(int i = 5; i<instr->op.first.length(); i++){
-    // //     if(instr->op.first[i] == ' ') break;
-    // //     name+=instr->op.first[i];
-    // // }
-    
-    // curr_func = s;
-    arg_size = 0;
-    sym_entry* func_entry = lookup(s);
-    for(auto it: *(func_entry->entry)){
-        if(it.second->offset < 0){
-            // cout<<it.second->offset<<" ";
-            arg_size = max(arg_size, abs(it.second->offset));
-        }
-    }
-    if(arg_size) arg_size+=4;
-    else arg_size = 8;
-    // cout<<"\n";
-
-
-    code_file << s << " :\n";
-    code_file << "\tpush ebp\n";
-    code_file << "\tmov ebp, esp\n"; 
-    code_file << "\tsub esp, "<<func_local_size(s)<<"\n";
-
-    pointed_by.clear();
-}
-
-
-void lshift_op(quad* instr){    // <<
-    exclude_this.insert("ecx");
-    string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    
-    if(instr->arg1.second->is_derefer) {
-        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
-        code_file<<"\tmov "<<str <<", "<< reg1<<endl;
-        code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
-    }
-    free_reg("ecx");
-    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
-    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
-    mem2 = "cl";    
-    code_file << "\tshl " << reg1 << ", " << mem2 <<"\n";
-    exclude_this.clear();
-    update_reg_desc(reg1, &instr->res);
-}
-
-void rshift_op(quad* instr){    // >>
-    exclude_this.insert("ecx");
-    string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    
-    if(instr->arg1.second->is_derefer) {
-        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
-        code_file<<"\tmov "<<str <<", "<< reg1<<endl;
-        code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
-    }
-    free_reg("ecx");
-    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
-    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
-    mem2 = "cl";    
-    code_file << "\tsar " << reg1 << ", " << mem2 <<"\n";
-    exclude_this.clear();
-    update_reg_desc(reg1, &instr->res);
-}
-
-void unary_op(quad* instr){
-    // cout<<"vfvfewvdcdwc";
-    string op = instr->op.first;
-    string temp;
-    // cout<<instr->arg1.second->addr_descriptor.reg;
-   
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    temp =reg;
-
-    string instruction = "";
-    if(op[2] == 'P'){
-        // TODO
-        if(op == "++P")      instruction = "inc";
-        else if(op == "--P") instruction = "dec";
-        // string reg1 = getReg(&instr->res, &empty_var, &instr->arg1, instr->idx);
-    
-        // code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
-        // code_file << "\t"<<instruction<<" "<<reg1 <<"\n";
-        // string mem = get_mem_location(&instr->arg1, &instr->res, instr->idx, 0);
-        // code_file << "\tmov " << mem << ", " <<  reg1<<"\n";
-        // update_reg_desc(reg1, &instr->res);
-        if(instr->arg1.second->is_derefer){
-            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-
-            reg = "[ " + reg + " ]";
-
-            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
-            code_file<<"\t"<<instruction<<" "<<reg1<<endl;
-            code_file<<"\tmov "<<reg<<", "<<reg1<<endl;
-            update_reg_desc(reg1, &instr->res);
-        }
-        else{
-            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            code_file<<"\t"<<instruction<<" "<<reg<<endl;
-            free_reg(reg);
-            update_reg_desc(reg, &instr->res);
-        }
-        
-    }
-    else if(op[2] == 'S'){
-        //done for single lvl pointer
-        if(op == "++S")      instruction = "inc";
-        else if(op == "--S") instruction = "dec";
-        // update_reg_desc(reg, &instr->res);
-        // string reg1 = getReg(&instr->res, &empty_var, &instr->arg1, instr->idx);
-        // // if(instr->arg1.second->is_derefer) code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
-        // code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
-        // string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
-        // code_file<<"\tmov "<< mem <<", "<<reg1<<"\n";
-        // free_reg(reg1);
-        // code_file << "\t"<<instruction<< " "<<reg1<<"\n";
-        // code_file<<"\tmov "<<reg<<", "<<reg1<<"\n";
-        if(instr->arg1.second->is_derefer){
-            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-
-            reg = "[ " + reg + " ]";
-            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
-            update_reg_desc(reg1, &instr->res);
-
-            code_file<<"\t"<<instruction<<" "<<reg1<<endl;
-            code_file<<"\tmov "<<reg<<", "<<reg1<<endl;
-        }
-        else{
-            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
-            update_reg_desc(reg1, &instr->res);
-
-            code_file<<"\t"<<instruction<<" "<<reg<<endl;
-            string str = get_mem_location(&instr->arg1, &empty_var,instr->idx,-1);
-            code_file<<"\tmov "<<str<<", "<<reg<<"\n";
-            // free_reg(reg);
-        }
-    }
-    else if(op =="~" ) {
-        instruction = "not";
-        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-        if(instr->arg1.second->is_derefer){
-            // string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            // string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-            // string str = get_mem_location(&instr->arg1, &instr->res, instr->idx, -1);
-            // code_file<<"\tmov "<<str<<", "<<reg<<"\n";
-            reg = "[ " + reg + " ]";
-        }
-
-        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
-        code_file << "\t"<<instruction<< " "<<reg1<<"\n";        
-        update_reg_desc(reg1, &instr->res);
-    }
-    else if(op == "unary-"){
-        instruction = "neg";
-        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-        if(instr->arg1.second->is_derefer){
-            // string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            // string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-            // string str = get_mem_location(&instr->arg1, &instr->res, instr->idx, -1);
-            // code_file<<"\tmov "<<str<<", "<<reg<<"\n";
-            reg = "[ " + reg + " ]";
-        }
-        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
-        code_file << "\t"<<instruction<< " "<<reg1<<"\n";        
-        update_reg_desc(reg1, &instr->res);
-    }
-    else if(op == "unary+"){
-        // instruction = "neg";
-        // code_file << "\t"<<instruction<< " "<<reg <<"\n";   
-        // string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-        // code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";     
-        // update_reg_desc(reg1, &instr->res);
-        reg_desc[reg].insert(instr->res);
-        instr->res.second->addr_descriptor.reg = reg;
-    }
-    else if(op == "!"){
-        string l1 = get_label();
-        string l2 = get_label();
-        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-        if(instr->arg1.second->is_derefer){
-            // string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-            // string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
-            // string str = get_mem_location(&instr->arg1, &instr->res, instr->idx, -1);
-            // code_file<<"\tmov "<<str<<", "<<reg<<"\n";
-            reg = "[ " + reg + " ]";
-        }
-        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
-        code_file << "\tcmp "<<reg1<<", dword "<<0<<"\n";  //dword inserted
-        code_file << "\tje "<<l1<<"\n";
-        code_file << "\tmov "<<reg1<<", dword "<<0<<"\n";
-        code_file << "\tjmp "<<l2<<"\n";
-        code_file << l1 <<":\n";
-        code_file << "\tmov "<<reg1<<", dword "<<1<<"\n";
-        code_file << l2 <<":\n";
-        update_reg_desc(reg1, &instr->res);
-    }
-}
-
+// logical and operation (&&)
 void logic_and(quad *instr){
     
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
@@ -727,7 +260,6 @@ void logic_and(quad *instr){
             code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
         }
 
-        // exclude_this.insert(reg);
         string mem2 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
     
         code_file << "\tcmp "<<reg<<", dword "<<0<<"\n";
@@ -743,6 +275,7 @@ void logic_and(quad *instr){
     }
 }
 
+// Logical or operation (||)
 void logic_or(quad *instr){
     
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
@@ -782,35 +315,6 @@ void logic_or(quad *instr){
     }
 }
 
-void bitwise_op(quad* instr){
-    string op = instr->op.first;
-        
-
-    if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
-        int val = 0;
-        if(op[0] == '^')      val = (stoi(instr->arg1.first) ^ stoi(instr->arg2.first));
-        else if(op[0] == '&')  val = (stoi(instr->arg1.first) & stoi(instr->arg2.first));
-        else if(op[0] == '|') val = (stoi(instr->arg1.first) | stoi(instr->arg2.first));
-        string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 1);
-        code_file << "\tmov " << mem <<", " << "dword "<< val << "\n";
-        return;
-    }
-    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-    if(instr->arg1.second->is_derefer){
-        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
-        code_file<<"\tmov "<<str <<", "<< reg<<endl;
-        code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
-    }
-
-    string instruction = "";
-    if(op[0] == '^')      instruction = "xor";
-    else if(op[0] == '&') instruction = "and";
-    else if(op[0] == '|') instruction = "or";
-    
-    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
-    code_file << "\t"<<instruction<< " "<<reg <<", "<<mem2 <<"\n";
-    update_reg_desc(reg, &instr->res);
-}
 
 void comparison_op(quad* instr){
     string op = instr->op.first;
@@ -818,21 +322,23 @@ void comparison_op(quad* instr){
     l1 = get_label();
     l2 = get_label();
         
-
     if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
         int val = 0;
-        if(op == "==")      val = (stoi(instr->arg1.first) == stoi(instr->arg2.first));
-        else if(op == "<")  val = (stoi(instr->arg1.first) < stoi(instr->arg2.first));
-        else if(op == "<=") val = (stoi(instr->arg1.first) <= stoi(instr->arg2.first));
-        else if(op == ">")  val = (stoi(instr->arg1.first) > stoi(instr->arg2.first));
-        else if(op == ">=") val = (stoi(instr->arg1.first) >= stoi(instr->arg2.first));
-        else if(op == "!=") val = (stoi(instr->arg1.first) != stoi(instr->arg2.first));
+        
+        if(op == "==")      val = (stoi(instr->arg1.first)  ==  stoi(instr->arg2.first));
+        else if(op == "<")  val = (stoi(instr->arg1.first)  <   stoi(instr->arg2.first));
+        else if(op == "<=") val = (stoi(instr->arg1.first)  <=  stoi(instr->arg2.first));
+        else if(op == ">")  val = (stoi(instr->arg1.first)  >   stoi(instr->arg2.first));
+        else if(op == ">=") val = (stoi(instr->arg1.first)  >=  stoi(instr->arg2.first));
+        else if(op == "!=") val = (stoi(instr->arg1.first)  !=  stoi(instr->arg2.first));
+        
         string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 1);
         code_file << "\tmov " << mem <<", " << "dword "<< val << "\n";
         return;
     }
 
     string reg = getReg(&instr->arg1, &empty_var, &instr->arg2, instr->idx);
+    
     if(instr->arg1.second->is_derefer){
         string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
         code_file<<"\tmov "<<str <<", "<< reg<<endl;
@@ -860,6 +366,134 @@ void comparison_op(quad* instr){
     update_reg_desc(reg, &instr->res);
 }
 
+
+//----------------------------------------------------- Bitwise operators ----------------------------------------------------//
+
+
+// Left shift operation
+void lshift_op(quad* instr){
+    exclude_this.insert("ecx");
+    string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+    
+    if(instr->arg1.second->is_derefer) {
+        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
+        code_file<<"\tmov "<<str <<", "<< reg1<<endl;
+        code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+    }
+
+    free_reg("ecx");
+    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
+    mem2 = "cl";    
+    code_file << "\tshl " << reg1 << ", " << mem2 <<"\n";
+    exclude_this.clear();
+    update_reg_desc(reg1, &instr->res);
+}
+
+// Right Shift operation
+void rshift_op(quad* instr){
+    exclude_this.insert("ecx");
+    string reg1 = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+    
+    if(instr->arg1.second->is_derefer) {
+        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
+        code_file<<"\tmov "<<str <<", "<< reg1<<endl;
+        code_file<<"\tmov "<<reg1<<", [ "<<reg1<<" ]\n";
+    }
+
+    free_reg("ecx");
+    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+    code_file << "\tmov " << "ecx" << ", " << mem2 <<"\n";
+    mem2 = "cl";    
+    code_file << "\tsar " << reg1 << ", " << mem2 <<"\n";
+    exclude_this.clear();
+    update_reg_desc(reg1, &instr->res);
+}
+
+void bitwise_op(quad* instr){
+    string op = instr->op.first;
+
+    if(is_integer(instr->arg1.first) && is_integer(instr->arg2.first)){
+        int val = 0;
+        
+        if(op[0] == '^')        val = (stoi(instr->arg1.first) ^ stoi(instr->arg2.first));
+        else if(op[0] == '&')   val = (stoi(instr->arg1.first) & stoi(instr->arg2.first));
+        else if(op[0] == '|')   val = (stoi(instr->arg1.first) | stoi(instr->arg2.first));
+        
+        string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 1);
+        code_file << "\tmov " << mem <<", " << "dword "<< val << "\n";
+        return;
+    }
+    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+    
+    if(instr->arg1.second->is_derefer){
+        string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
+        code_file<<"\tmov "<<str <<", "<< reg<<endl;
+        code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
+    }
+
+    string instruction = "";
+    
+    if(op[0] == '^')      instruction = "xor";
+    else if(op[0] == '&') instruction = "and";
+    else if(op[0] == '|') instruction = "or";
+    
+    string mem2 = get_mem_location(&instr->arg2, &instr->arg1, instr->idx, 0);
+    code_file << "\t"<<instruction<< " "<<reg <<", "<<mem2 <<"\n";
+    update_reg_desc(reg, &instr->res);
+}
+
+//----------------------------------------------------- Return and Goto ----------------------------------------------------//
+
+// returning from a function
+void return_op(quad* instr){
+    if(instr->arg1.first != ""){
+        if(typeLookup(instr->arg1.second->type)){
+            for(auto it: reg_desc){
+                free_reg(it.first);
+            }
+            string reg1 = getTemporaryReg(&empty_var, instr->idx);
+            
+            exclude_this.insert(reg1);
+            
+            string reg2 = getTemporaryReg(&empty_var, instr->idx);
+            exclude_this.clear();
+            
+            code_file<<"\tmov "<<reg1<<", [ ebp + "<<arg_size<<" ]\n";
+            
+            int struct_size = getStructsize(instr->arg1.second->type);
+            int struct_offset = instr->arg1.second->offset;
+            if(instr->arg1.second->offset < 0){
+                for(int i = 0; i<struct_size; i+=4){
+                    code_file<<"\tmov "<<reg2<<", [ ebp + "<<abs(struct_offset) - i<<" ]\n";
+                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
+                }
+            }
+            else{
+                cout<<struct_size<<" "<<struct_offset<<" HERE\n";
+                for(int i = 0; i<struct_size; i+=4){
+                    code_file<<"\tmov "<<reg2<<", [ ebp - "<<struct_offset + 4 + i<<" ]\n";
+                    code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
+                }
+            }
+            code_file<<"\tleave\n";
+            code_file<<"\tret\n";
+        }
+        else{
+            string mem = get_mem_location(&instr->arg1, &empty_var, instr->idx, 1);
+            if(mem != "eax") code_file<<"\tmov eax, "<<mem<<"\n";
+            code_file<<"\tleave\n";
+            code_file<<"\tret\n";
+        }
+    }
+    else{
+        code_file<<"\txor eax, eax\n";
+        code_file<<"\tleave\n";
+        code_file<<"\tret\n";
+    }
+}
+
+// Goto operation
 void goto_op(quad* instr){
     end_basic_block();
     int id = instr->idx;
@@ -874,13 +508,305 @@ void goto_op(quad* instr){
     }
 }
 
-void pointer_op(quad* instr){
 
-    if(is_integer(instr->arg1.first)){
-            // Give error
+//----------------------------------------------------- Function Call ----------------------------------------------------//
 
+void call_func(quad *instr){
+
+    for(auto it: reg_desc){
+        free_reg(it.first);
+    }
+
+    int curr_reg = 0;
+    int i = stoi(instr->arg2.first);
+    int sz = i;
+
+    sym_entry* func_entry = lookup(instr->arg1.first);
+    string ret_type = "";
+    if(func_entry) ret_type = func_entry->type.substr(5, func_entry->type.length()-5);
+    
+    if(typeLookup(ret_type)){
+        code_file<<"\tlea eax, "<<get_mem_location(&instr->res, &empty_var, -1, -1)<<"\n";
+        code_file<<"\tpush eax\n";
+    }
+
+    while(i>0){
+        if(params.top().first[0] == '\"'){            
+            stringlabels.insert({string_counter, params.top().first});
+            code_file<<"\tpush __str__"<<string_counter<<"\n";
+            string_counter++;
+        }
+        else if(typeLookup(params.top().second->type)){
+            int type_size = getSize(params.top().second->type), type_offset = params.top().second->offset;
+            
+            if(params.top().second->is_derefer) {
+                string reg = getReg(&params.top(), &empty_var, &empty_var, instr->idx);
+                
+                for(int i = type_size - 4; i>=0; i-=4){
+                    code_file<<"\tpush dword [ "<<reg<<" + "<<i<<" ]\n";
+                }
+            }
+            else {
+                if(type_offset > 0){
+                    for(int i = type_offset; i<type_size + type_offset; i+=4){
+                        code_file<<"\tpush dword [ ebp - "<<i+4<<" ]\n";
+                    }
+                }
+                else{
+                    for(int i = 0; i<type_size; i+=4){
+                        code_file<<"\tpush dword [ ebp + "<<abs(type_offset+i)<<" ]\n";
+                    }
+                }
+            }
+        }
+        else if(params.top().second->is_derefer){
+            string mem;
+            mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
+            code_file<<"\tpush dword "<<mem<<"\n";
+        }
+        else if(params.top().second->isArray){
+            string str = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
+            code_file<<"\tlea eax, "<< str <<"\n";
+            code_file<<"\tpush eax\n";
+        }
+        else{
+            string mem = get_mem_location(&params.top(), &empty_var, instr->idx, 1);
+            
+            if(reg_desc.find(mem) == reg_desc.end() && mem.substr(0,5) != "dword") mem = "dword "+mem;
+            code_file<<"\tpush "<<mem<<"\n";
+            
+        }
+        i--;
+        params.pop();
+    }
+    
+    code_file<<"\tcall "<<instr->arg1.first<<"\n";
+    
+    if(!typeLookup(ret_type)){
+        reg_desc["eax"].insert(instr->res);
+        instr->res.second->addr_descriptor.reg = "eax";
+    }
+    else sz++;
+
+    // Clear args from stack
+    code_file<<"\tadd esp, "<<4*sz<<"\n";
+}
+
+// convert char to its ASCII value
+string char_to_int(string sym){
+    if(sym[0]!='\'')return sym;
+    if(sym[1] == '\\'){
+        string s = sym.substr(1,2);
+        if(s == "\\0") return "0";
+        if(s == "\\n") return "10";
+        if(s == "\\t") return "9";
+    } 
+    int val = (int )sym[1];
+    sym = to_string(val);
+    return sym;
+}
+
+//----------------------------------------------------- Assignment ----------------------------------------------------//
+
+void assign_op(quad* instr){
+    // for global variables
+    if(!in_func){
+        cout<<instr->res.first<<"\n";
+        if(instr->res.first == "array_init") return;
+        globaldecl[instr->res.first].first = instr->arg1.first;
         return;
     }
+    // *x = 1
+    if(instr->res.second->is_derefer){
+        string res_mem = getReg(&instr->res, &empty_var, &instr->arg1, -1);
+        string arg1_mem = getReg(&instr->arg1, &empty_var, &instr->res, -1);
+        res_mem = "[ " + res_mem + " ]";
+
+        if(instr->arg1.second->is_derefer){
+            code_file<<"\tmov "<<arg1_mem <<", [ "<<arg1_mem<<" ]"<<"\n";
+        }
+        code_file<<"\tmov "<<res_mem<<", "<<arg1_mem<<"\n";
+    }
+    // x = 1
+    else if(is_integer(instr->arg1.first)){
+        string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
+        if(reg_desc.find(mem) != reg_desc.end()){
+            free_reg(mem);
+            update_reg_desc(mem, &instr->res);
+        }
+        code_file << "\tmov "<< mem << ", dword "<< instr->arg1.first <<endl;
+    }
+    // for user defined types 
+    else if(typeLookup(instr->res.second->type)){
+        
+        for(auto it: reg_desc){
+            free_reg(it.first);
+        }
+
+        string reg = getTemporaryReg(&empty_var, instr->idx);
+        int res_offset = instr->res.second->offset, temp_offset = instr->arg1.second->offset;
+        int struct_size = getStructsize(instr->res.second->type);
+        
+        for(int i = 0; i<struct_size; i+=4){
+            code_file<<"\tmov "<<reg<<", [ ebp - "<<temp_offset + 4 + i<<" ]\n";
+            code_file<<"\tmov [ ebp - "<<res_offset + 4 + i<<" ], "<<reg<<"\n";
+        }
+    } 
+    // x = y
+    else{
+        string reg = getReg(&instr->arg1, &instr->res, &empty_var, instr->idx);
+        
+        if(instr->arg1.second->is_derefer){
+            code_file<<"\tmov "<<reg <<", [ "<<reg<<" ]"<<"\n";
+            update_reg_desc(reg, &instr->res);        
+        }
+        else {
+            reg_desc[reg].insert(instr->res);
+            string prev_reg = instr->res.second->addr_descriptor.reg;
+            if(prev_reg != "") reg_desc[prev_reg].erase(instr->res);
+            instr->res.second->addr_descriptor.reg = reg;
+        }
+
+        if(instr->res.first=="array_init"){
+            string tem = get_mem_location(&instr->res,&empty_var,instr->idx,-1);
+            code_file << "\tmov " << tem << ", " << reg << "\n";
+            free_reg(reg);
+        }
+
+        if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
+            pointed_by[addr_pointed_to[instr->arg1]] = 1;
+        }
+
+        if(pointed_by[instr->res.second->offset]){
+            string reg_stored = instr->res.second->addr_descriptor.reg;
+            instr->res.second->addr_descriptor.reg = "";
+            reg_desc[reg_stored].erase(instr->res);
+            string str = get_mem_location(&instr->res, &instr->arg1, instr->idx, 0);
+            code_file<<"\tmov "<< str <<", "<<reg_stored<<"\n";
+        }
+
+        instr->res.second->addr_descriptor.stack = 0;
+    }
+}
+
+
+
+//----------------------------------------------------- Unary Operators ----------------------------------------------------//
+
+void unary_op(quad* instr){
+    string op = instr->op.first;
+    string temp;
+   
+    string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+    temp =reg;
+
+    string instruction = "";
+    if(op[2] == 'P'){
+        // TODO
+        if(op == "++P")      instruction = "inc";
+        else if(op == "--P") instruction = "dec";
+        
+        if(instr->arg1.second->is_derefer){
+            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+
+            reg = "[ " + reg + " ]";
+
+            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
+            code_file<<"\t"<<instruction<<" "<<reg1<<endl;
+            code_file<<"\tmov "<<reg<<", "<<reg1<<endl;
+            update_reg_desc(reg1, &instr->res);
+        }
+        else{
+            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+            code_file<<"\t"<<instruction<<" "<<reg<<endl;
+            free_reg(reg);
+            update_reg_desc(reg, &instr->res);
+        }
+        
+    }
+    else if(op[2] == 'S'){
+        if(op == "++S")      instruction = "inc";
+        else if(op == "--S") instruction = "dec";
+        
+        if(instr->arg1.second->is_derefer){
+            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+
+            reg = "[ " + reg + " ]";
+            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
+            update_reg_desc(reg1, &instr->res);
+
+            code_file<<"\t"<<instruction<<" "<<reg1<<endl;
+            code_file<<"\tmov "<<reg<<", "<<reg1<<endl;
+        }
+        else{
+            string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
+            string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+            code_file<<"\tmov "<<reg1<<", "<<reg<<endl;
+            update_reg_desc(reg1, &instr->res);
+
+            code_file<<"\t"<<instruction<<" "<<reg<<endl;
+            string str = get_mem_location(&instr->arg1, &empty_var,instr->idx,-1);
+            code_file<<"\tmov "<<str<<", "<<reg<<"\n";
+        }
+    }
+    else if(op =="~" ) {
+        instruction = "not";
+        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+        if(instr->arg1.second->is_derefer){
+            reg = "[ " + reg + " ]";
+        }
+
+        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
+        code_file << "\t"<<instruction<< " "<<reg1<<"\n";        
+        update_reg_desc(reg1, &instr->res);
+    }
+    else if(op == "unary-"){
+        instruction = "neg";
+        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+        
+        if(instr->arg1.second->is_derefer){
+            reg = "[ " + reg + " ]";
+        }
+
+        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
+        code_file << "\t"<<instruction<< " "<<reg1<<"\n";        
+        update_reg_desc(reg1, &instr->res);
+    }
+    else if(op == "unary+"){
+        reg_desc[reg].insert(instr->res);
+        instr->res.second->addr_descriptor.reg = reg;
+    }
+    else if(op == "!"){
+        string l1 = get_label();
+        string l2 = get_label();
+        string reg1 = getTemporaryReg(&instr->arg1, instr->idx);
+        
+        if(instr->arg1.second->is_derefer){
+            reg = "[ " + reg + " ]";
+        }
+
+        code_file<<"\tmov "<<reg1<<", "<<reg<<"\n";
+        code_file << "\tcmp "<<reg1<<", dword "<<0<<"\n";  //dword inserted
+        code_file << "\tje "<<l1<<"\n";
+        code_file << "\tmov "<<reg1<<", dword "<<0<<"\n";
+        code_file << "\tjmp "<<l2<<"\n";
+        code_file << l1 <<":\n";
+        code_file << "\tmov "<<reg1<<", dword "<<1<<"\n";
+        code_file << l2 <<":\n";
+        update_reg_desc(reg1, &instr->res);
+    }
+}
+
+//----------------------------------------------------- Miscellaneous operations ----------------------------------------------------//
+
+// for pointer referencing and de-referencing
+void pointer_op(quad* instr){
+    if(is_integer(instr->arg1.first)){
+        return;
+    }
+
     if(instr->arg1.first[0] != '#'){
         string reg = instr->arg1.second->addr_descriptor.reg;
         if(reg!= ""){
@@ -896,7 +822,6 @@ void pointer_op(quad* instr){
         string mem = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, 2);
 
         if(instr->arg1.second->is_derefer){
-            //cout<<"YO WASS UP\n";
             code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
         }
         else{
@@ -920,15 +845,15 @@ void pointer_op(quad* instr){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, 0);
             code_file<<"\tmov "<<reg<<", "<< str <<"\n";
         }
-        instr->res.second->is_derefer = 1;
 
+        instr->res.second->is_derefer = 1;
         update_reg_desc(reg, &instr->res);
     }
 }
 
+// member access for pointer of user defined data type
 void ptr_op(quad* instr){
-    // struct_node -> b
-
+    
     string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
     if(instr->arg1.second->is_derefer){
         string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
@@ -942,57 +867,50 @@ void ptr_op(quad* instr){
     update_reg_desc(reg, &instr->res);
 }
 
+// member access for variable of user defined data type
 void member_access(quad* instr){
     if(!instr->arg1.second->is_derefer){
-        // cout<<"HERE\n";
         instr->res.second->offset = instr->arg1.second->offset - instr->arg2.second->offset - instr->arg2.second->size + instr->arg1.second->size;
         if(instr->arg2.second->isArray) {
             instr->res.second->offset += instr->arg2.second->size - 4;
         }
         pointed_by[instr->res.second->offset] = 1;
         instr->res.second->isArray = instr->arg2.second->isArray;
-        // instr->res.second->array_dims = instr->arg2.second->array_dims;
         for(int i: instr->res.second->array_dims) {
             cout<<i<<"\n";
         }
-        // cout<<instr-
-        // cout<<instr->arg1.second->offset<<" "<<instr->arg2.second->offset<<" "<<instr->arg1.second->size<<"\n";
-        // cout<<"offset "<<instr->res.second->offset<<"\n";
     }
     else{
         string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
-        // cout<<reg<<" "<<instr->arg2.second->offset<<"\n";
         code_file<<"\tadd "<<reg<<", "<<instr->arg2.second->offset<<"\n";
-        if(!instr->arg2.second->isArray) instr->res.second->is_derefer = 1;
         
+        if(!instr->arg2.second->isArray) instr->res.second->is_derefer = 1;
         update_reg_desc(reg, &instr->res);
     }
 }
 
+// referencing element of an array 
 void array_op(quad* instr){
         string reg = getReg(&instr->res, &empty_var, &instr->arg2, instr->idx);
         string mem, str;
         
-        if(instr->arg1.second->isArray && !instr->arg1.second->is_global) {    //First index
+        if(instr->arg1.second->isArray && !instr->arg1.second->is_global) {
             if(instr->arg1.second->addr_descriptor.reg != ""){
                 string temp_reg = instr->arg1.second->addr_descriptor.reg;
                 instr->arg1.second->addr_descriptor.reg = "";
                 str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, 0);
                 code_file<<"\tmov "<< str <<", "<<temp_reg<<"\n"; 
             }
-            // code_file<<";in if\n";    
             mem = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, 0);
             code_file<<"\tlea "<<reg<<", "<<mem<<"\n";
         }
         else {
-            // code_file<<";in else!!!\n";
             mem = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, 0);
             code_file<<"\tmov "<<reg<<", "<<mem<<"\n";
         }
         
         exclude_this.insert(reg);
         string reg1 = getReg(&instr->arg2, &empty_var, &instr->arg1, instr->idx);
-       // free_reg(reg1);
         if(instr->arg2.second->is_derefer){
             string str = get_mem_location(&instr->arg1, &instr->arg2, instr->idx, -1);
             code_file<<"\tmov "<<str <<", "<< reg1<<endl;
@@ -1010,24 +928,25 @@ void array_op(quad* instr){
        
         code_file<<"\tadd "<<reg<<", "<<reg1<<"\n";
         if(instr->arg1.second->array_dims.empty()) instr->res.second->is_derefer = 1;
-        // cout<<instr->arg1.second->array_dims.empty() <<" "<<
+        
         exclude_this.clear();
         reg_desc[reg1].erase(instr->arg2);
         instr->arg2.second->addr_descriptor.reg = "";
-        
         
         update_reg_desc(reg, &instr->res);
 
 }
 
+// sizeof operator
 void sizeof_op(quad* instr){
     string mem = get_mem_location(&instr->res, &empty_var, instr->idx, 0);
-    // cout<<"HERE "<<instr->arg1.second->type<<" "<<getSize(instr->arg1.second->type)<<"\n";
     code_file<<"\tmov "<<mem<<", dword "<<instr->arg1.second->size<<"\n";
 }
 
+//----------------------------------------------------- Main function and helper functions----------------------------------------------------//
+
+// main function which calls other function
 void genCode(){
-    // Prints final code to be generated in asm file
     findBasicBlocks();
     initializeRegs();
     nextUse();
@@ -1040,13 +959,14 @@ void genCode(){
     int index = 0;
     for (auto it=leaders.begin(); it != leaders.end(); it++){
         if(!visited[index++]){
-            //cout<<it->first<<endl;
             continue;
         }
+
         code_file << it->second <<":\n";
         auto it1 = it;
         it1++;
         if(it1 == leaders.end()) break;
+        
         int ended = 0;
         int start = it->first;
         int end = it1->first;
@@ -1057,6 +977,7 @@ void genCode(){
             if(instr.arg2.first != "") instr.arg2.first = char_to_int(instr.arg2.first);
             
             code_file<<"\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
+            
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
                 in_func = 1;
                 gen_func_label(&instr);
@@ -1071,7 +992,6 @@ void genCode(){
             else if(instr.op.first[0] == '+')    add_op(&instr);
             else if(instr.op.first == "=")   assign_op(&instr);
             else if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 'd'){
-                // ended = 1;
                 end_basic_block();
                 code_file << "\txor eax, eax\n";
                 code_file << "\tleave\n";
@@ -1085,7 +1005,6 @@ void genCode(){
             else if(instr.op.first[0] == '/') div_op(&instr);
             else if(instr.op.first[0] == '%') mod_op(&instr);
             else if(instr.op.first == "RETURN"){
-                // ended = 1;
                 return_op(&instr);
             }
             else if(instr.op.first == "param") params.push(instr.arg1);
@@ -1102,25 +1021,22 @@ void genCode(){
             else if(instr.op.first.substr(0,2) == "<<") lshift_op(&instr);
             else if(instr.op.first.substr(0,2) == ">>") rshift_op(&instr);
             else if(instr.op.first[0] == '^' ||  instr.op.first[0] == '&' || instr.op.first[0] == '|') bitwise_op(&instr);
-            else if(instr.op.first == "GOTO") {
-                // cout<<instr.idx <<"---\n";
-                // print3AC_code();
-                
+            else if(instr.op.first == "GOTO") {    
                 goto_op(&instr);
-                // ended=1;
             }
             else if(instr.op.first == "PTR_OP") ptr_op(&instr);
             else if(instr.op.first == "member_access") member_access(&instr);
             else if(instr.op.first == "[ ]") array_op(&instr);
             else if(instr.op.first == "SIZEOF") sizeof_op(&instr);
         }
-        if(!ended) end_basic_block();
+        end_basic_block();
     }
 
     print_global_data();
     
 }
 
+// print the data section for the asm file
 void print_global_data(){
     if(!globaldecl.empty()){
         code_file<<"section .data\n";
@@ -1155,15 +1071,20 @@ void print_global_data(){
     }
     for(auto it: stringlabels){
         it.second[0] = '\`', it.second[it.second.length()-1] = '\`';
-        code_file<<"str"<<it.first<<": db "<<it.second<<", 0\n";
+        code_file<<"__str__"<<it.first<<": db "<<it.second<<", 0\n";
     }
 }
 
 string get_type_size(string sym){
-    if(gst[sym]->type.substr(0,2) == "ch") return " db ";
+    if(gst[sym]->type.substr(0,2) == "ch"){
+        // if(gst[sym]->type[gst[sym]->type.length()-1] != '*') return " db ";
+        // else return " dd ";
+        return " db ";
+    }
     else return " dd "; 
 }
 
+// save the values of variables when going out of basic block
 void end_basic_block(){
     for(auto reg = reg_desc.begin();reg!=reg_desc.end();reg++){
         for(auto sym =reg->second.begin() ;sym!=reg->second.end(); sym++){
@@ -1176,10 +1097,9 @@ void end_basic_block(){
         }
         reg->second.clear();
     }
-    //cout<<"Coming out of end_basic_block"<<endl;
 }
 
-
+// add sym to variables stores in reg
 void update_reg_desc(string reg, qid* sym){
     for(auto it = reg_desc[reg].begin();it != reg_desc[reg].end(); it++){
         it->second->addr_descriptor.reg = "";
@@ -1191,11 +1111,7 @@ void update_reg_desc(string reg, qid* sym){
     }
     
     reg_desc[reg].clear();
-    // cout<<reg<<endl;
-    // cout<<sym->first<<endl;
-    // cout<<typeid(*sym)<<endl;
-    reg_desc[reg].insert(*sym);          // x = y + z; 
-    // cout<<sym->first<<" in "<<reg<<"\n";
+    reg_desc[reg].insert(*sym);
     sym->second->addr_descriptor.heap = false;
     sym->second->addr_descriptor.stack = false;
     sym->second->addr_descriptor.reg = reg;
@@ -1211,10 +1127,8 @@ void initializeRegs(){
     reg_desc.insert(make_pair("edi", set<qid> () ));
 }
 
-
+// free registers allocated to Dead temporaries
 void freeDeadTemp(int idx){
-    // free registers allocated to Dead temporaries
-    
     for(auto it = reg_desc.begin(); it != reg_desc.end(); it++){
         vector<qid> temp;
         for(auto sym : it->second){
@@ -1229,6 +1143,8 @@ void freeDeadTemp(int idx){
     }
 }
 
+// Get memmory location of a variable
+// It can return a register or stack memory location
 // -1: only stack mem location required!!
 // 0: otherwise
 // 1: for instructions which require size
@@ -1248,9 +1164,8 @@ string get_mem_location(qid* sym, qid* sym2, int idx, int flag){
         return "[ " + sym->second->addr_descriptor.reg + " ]";
     }
     
-
+    //Symbol in stack
     if(sym->second->heap_mem == 0){
-        //Symbol in stack
         int offset = sym->second->offset;
         int size = sym->second->size;
         string str;
@@ -1269,12 +1184,14 @@ string get_mem_location(qid* sym, qid* sym2, int idx, int flag){
 
         return str;
     }
+    
     // Wont come here as of now
     sym->second->addr_descriptor.stack = false;
     sym->second->addr_descriptor.heap = true;
     return string("[ " + to_string(sym->second->heap_mem) + " ]");
 }
 
+// Get a temporary register
 string getTemporaryReg(qid* exclude_symbol, int idx){
     // freeDeadTemp(idx);
     string reg = "";
@@ -1294,20 +1211,13 @@ string getTemporaryReg(qid* exclude_symbol, int idx){
     return reg;
 }
 
+// allocates a register to a variable
+// efficient allocation is done to minise load or store
 string getReg(qid* sym, qid* result, qid* sym2, int idx){
-    // Allocates best register if available
-
     // Case 1
     string reg = "";
     if(sym->second->addr_descriptor.reg != "") {
         reg = sym->second->addr_descriptor.reg;
-        // If Not temporary, update the value of reg. into memory
-        // if(sym->first[0]!='#' && !(sym->second->addr_descriptor.stack || sym->second->addr_descriptor.heap)){
-        //     cout<<"in getreg\n";
-        //     sym->second->addr_descriptor.reg = "";
-        //     string str = get_mem_location(sym, sym2, idx, 1); 
-        //     code_file << "\tmov " << str << ", " << reg <<endl;
-        // }
         vector<qid> temp;
         for(auto it: reg_desc[reg]){
             if(it.first[0]!='#' && !(it.second->addr_descriptor.stack || it.second->addr_descriptor.heap)){
@@ -1328,15 +1238,9 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
 
     reg = getTemporaryReg(sym2, idx);
     
-    //check for char and set value in reg to 0
-    // string tmp = char_to_int(sym->first);
-    //if(sym->second->type == "char") code_file << "\txor "<< reg <<", "<<reg<<"\n";
-
-
-    // code_file<<"; "<<sym->first<<" , Reg : "<<reg<<" "<<str<<endl;
     if(sym->first[0] == '\"'){
         stringlabels[string_counter] = sym->first;
-        code_file<<"\tmov "<<reg<<", str"<<string_counter<<"\n";
+        code_file<<"\tmov "<<reg<<", __str__"<<string_counter<<"\n";
         string_counter++;
     }
     else{
@@ -1348,7 +1252,55 @@ string getReg(qid* sym, qid* result, qid* sym2, int idx){
     return reg;
 }
 
+// Clear all the registers
+void clear_regs(){
+    for(auto reg = reg_desc.begin(); reg != reg_desc.end(); reg++){
+        reg->second.clear();
+    }
+}
 
+
+// free a specific register
+void free_reg(string reg){
+    for(auto sym: reg_desc[reg]){
+        if(is_integer(sym.first)) continue;
+        
+        sym.second->addr_descriptor.reg = "";
+        string str = get_mem_location(&sym, &empty_var, -1, -1);
+        code_file<<"\tmov "<< str <<", "<<reg<<"\n";
+    }
+    reg_desc[reg].clear();
+}
+
+
+// function prologue
+void gen_func_label(quad* instr){
+    string s = "";
+    for(int i=5;i<instr->op.first.size(); i++){
+        if(instr->op.first[i] == ' ')break;
+        s += instr->op.first[i];
+    }
+
+    arg_size = 0;
+    sym_entry* func_entry = lookup(s);
+    for(auto it: *(func_entry->entry)){
+        if(it.second->offset < 0){
+            arg_size = max(arg_size, abs(it.second->offset));
+        }
+    }
+    if(arg_size) arg_size+=4;
+    else arg_size = 8;
+
+    code_file << s << " :\n";
+    code_file << "\tpush ebp\n";
+    code_file << "\tmov ebp, esp\n"; 
+    code_file << "\tsub esp, "<<func_local_size(s)<<"\n";
+
+    pointed_by.clear();
+}
+
+
+// Calculates the nextuse of temporary variables
 void nextUse(){
     for(auto it=leaders.begin(); it != leaders.end(); it++){
         auto it1 = it;
@@ -1369,9 +1321,8 @@ void nextUse(){
     }
 }
 
+ // Finds Basic block in 3AC code.
 void findBasicBlocks(){
-    // Finds Basic block in 3AC code.
-
     for (int i=0;i< (int)code.size(); i++){
 
         if (i == 0){
@@ -1390,10 +1341,7 @@ void findBasicBlocks(){
     leaders.insert(make_pair(code.size(), get_label()));
 }
 
-
-/////deadcode removal
-
-
+//----------------------------------------------------- Dead Code Removal ----------------------------------------------------//
 void dfs(int curr, vector<int>&visited, vector<vector<int> >&adj_list){
     visited[curr]=1;
     for(auto h:adj_list[curr]){
@@ -1431,16 +1379,10 @@ vector<int> findDeadCode(){
     }
 
     dfs(0, visited, adj_list);
-
-    // for(int i=0; i<n; i++){
-    //     cout<<visited[i]<<" ";
-    // }
-    //cout<<endl;
     return visited;
 }
 
-/////jump optimisation
-
+//----------------------------------------------------- Jump to Jump optimization ----------------------------------------------------//
 int findDest(int j, int cnt){
     cout<<"yup"<<endl;
     if(cnt>200) return j;
