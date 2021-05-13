@@ -1,6 +1,6 @@
 #include "typecheck.h"
 
-
+//RETURNS THE TYPE OF IDENTIFIER id USING lookup
 string primaryExpression(string id) {
     sym_entry* n = lookup(id);
     if(n) {
