@@ -17,6 +17,8 @@ FILE* dotfile;
 FILE* lexer_file;
 ofstream code_file;
 char* curr_file;
+int dump_tac = 0;
+int dump_sym_table = 0;
 
 string funcName = "";
 string structName = "";
@@ -3715,6 +3717,8 @@ void print_options(){
 	cout<<"\t--help\t\t\tDisplay available options\n";
 	cout<<"\t-l <file>\t\tonly runs the lexer and dumps output in <file>\n";
 	cout<<"\t-o <file>\t\tdump the dot script generated in <file>\n";
+	cout<<"\t-dump-sym-table\t\tdump the symbol tables corresponding to the defined types and functions\n";
+	cout<<"\t-dump-tac\t\tdump the intermediate 3ac in intermediate_3ac.txt\n";
 	cout<<"\n\n";
 }
 
@@ -3811,6 +3815,9 @@ int main(int argc, char* argv[]){
 				i++;
 			}
 		}
+		else if(!strcmp(argv[i], "-dump-sym-table")) dump_sym_table = 1;
+		else if(!strcmp(argv[i], "-dump-tac")) dump_tac = 1;
+		else if(!strcmp(argv[i], "-dump-all")) dump_tac = dump_sym_table = 1;
 		else if(argv[i][0] != '-') file_present++;
 	}
 
@@ -3902,17 +3909,11 @@ int main(int argc, char* argv[]){
 		code_file.open("gen_code.asm");
 		
 		setGlobal();
-		print3AC_code();
+		if(dump_tac) print3AC_code();
 		genCode();
 		endAST();
-		printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
+		if(dump_sym_table) printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
 	}
-
 	
 	return 0;
 }
-
-
-
-
-

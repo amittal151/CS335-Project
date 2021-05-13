@@ -99,28 +99,9 @@ void backpatch_rem(){
 }
 
 void print3AC_code(){
+    ofstream tac_file;
+    tac_file.open("intermediate_3ac.txt");
     for(int i=0;i<code.size(); i++){
-        cout<<code[i].op.first<<"\t\t"<<code[i].arg1.first<<"\t\t"<<code[i].arg2.first<<"\t\t"<<code[i].res.first<<"\t\t"<<code[i].idx<<"\t\t"<<i<<endl;
+        tac_file<<code[i].op.first<<"\t\t"<<code[i].arg1.first<<"\t\t"<<code[i].arg2.first<<"\t\t"<<code[i].res.first<<"\t\t"<<code[i].idx<<"\t\t"<<i<<endl;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

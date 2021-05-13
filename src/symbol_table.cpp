@@ -24,6 +24,7 @@ int avl=0;
 extern int isArray;
 extern vector<int> array_dims;
 extern map<string, int> func_usage_map;
+extern int dump_sym_table;
 map<string, pair<string, int>> globaldecl;
 
 int blockCnt = 1;
@@ -513,13 +514,14 @@ void setGlobal(){
 }
 
 void printSymbolTable(sym_table* table, string file_name){
+	if(!dump_sym_table) return;
 	FILE* file = fopen(file_name.c_str(), "w");
   	fprintf( file,"Name, Type, Size, isInitialized, Offset\n");
   	for(auto it: (*table)){
     	fprintf(file,"%s,%s,", it.first.c_str(), it.second->type.c_str());
 		fprintf(file, "%d,%d,%d\n", (it.second)->size, (it.second)->init, (it.second)->offset);
-  }
-  fclose(file);
+  	}
+  	fclose(file);
 }
 
 int getStructsize(string struct_name){
