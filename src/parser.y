@@ -2061,7 +2061,7 @@ init_declarator
 				$1->place = qid($1->temp_name, entry);
 				
 				
-				if(entry->isArray || (typeLookup($1->type) && $1->type.substr(0, 7) == "struct_")){
+				if(entry->isArray || (typeLookup($1->type) && $1->type.substr(0, 7) == "struct_" && $4->expType == 6)){
 					// cout<<"HERE @\n";
 					// cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
 					// cout<<
@@ -2080,7 +2080,7 @@ init_declarator
 					}
 					global_array_init_map.insert({$1->temp_name, initializer_list_values});
 				}
-				else if(typeLookup($1->type) && !lookup($4->temp_name)){
+				else if(typeLookup($1->type) && $4->expType == 6){
 					
 					if(initializer_list_values.size() > 1){
 						warning("excess elements in union initializer");
@@ -3011,10 +3011,13 @@ initializer
 		initializer_list_values.push_back($1->place);
 	}
 	| '{' initializer_list '}' {
+		
 		$$ = $2 ;
+		$$->expType = 6;
 	}
 	| '{' initializer_list ',' '}'{
 		$$ = $2;
+		$$->expType = 6;
 		if(!$2->is_error){
 			//3AC
 			$$->place = $2->place;
