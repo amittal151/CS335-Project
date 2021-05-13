@@ -4,21 +4,17 @@ sym_table gst;
 struct_sym_table struct_gst;
 map<sym_table*, sym_table*> parent_table;
 map<struct_sym_table*, struct_sym_table*> struct_parent_table;
-
-// map<string, int> struct_size;
 map<string, pair< string,vector<string> > > func_arg;
 int struct_offset;
-sym_table* curr_table; //store pointer of the current symbol table
+sym_table* curr_table;
 sym_table* curr_structure;
 struct_sym_table *curr_struct_table;
 stack<int> Goffset, Loffset, blockSz;
-
-typ_table typ_gst;  //map<string, string> typ_table;
+typ_table typ_gst;
 map<typ_table*, typ_table*> typ_parent_table;
 typ_table* curr_typ;
 int max_size = 0;
-int param_offset = -4; // parameter offset for a func
-
+int param_offset = -4;
 int struct_count = 1;
 int avl=0;
 extern int isArray;
@@ -26,9 +22,9 @@ extern vector<int> array_dims;
 extern map<string, int> func_usage_map;
 extern int dump_sym_table;
 map<string, pair<string, int>> globaldecl;
-
 int blockCnt = 1;
 
+// initialize base symbol table
 void symTable_init(){
 	Goffset.push(0);
 	Loffset.push(0);
@@ -41,7 +37,7 @@ void symTable_init(){
 	insertKeywords();
 }
 
-
+// constructor for symbol table entry
 sym_entry* createEntry(string type, int size, bool init, int offset, sym_table* ptr){
 	sym_entry* new_sym = new sym_entry();
 	new_sym->type = type;
@@ -52,6 +48,7 @@ sym_entry* createEntry(string type, int size, bool init, int offset, sym_table* 
 	return new_sym;
 }
 
+// create new symbol tables for new scopes
 void makeSymbolTable(string name, string f_type, int offset_flag){
 	if(!avl){
 		sym_table* new_table = new sym_table;
@@ -73,7 +70,6 @@ void makeSymbolTable(string name, string f_type, int offset_flag){
 		curr_table = new_table;
 		curr_struct_table = new_struct_table;
 		curr_typ = new_typ;
-
 	}
 	else{
 		avl = 0;
@@ -83,9 +79,8 @@ void makeSymbolTable(string name, string f_type, int offset_flag){
 	}
 }
 
-
+// remove func prototype from symbol table
 void removeFuncProto(){
-	// Removes the Temporary function Created in the Scope
 	avl = 0;
 	clear_paramoffset();
 	updSymbolTable("dummyF_name",1);
@@ -94,6 +89,7 @@ void removeFuncProto(){
 	Loffset.pop();
 }
 
+// update current symbol table and set parent as current (end of scope)
 void updSymbolTable(string id, int offset_flag){
 	int temp = Goffset.top();
 	Goffset.pop();
@@ -111,13 +107,11 @@ void updSymbolTable(string id, int offset_flag){
 		blockSz.pop();
 		blockSz.top()+=temp;
 	}
-	
-
 }
 
+// look up currently visible symbol table entry that corresponds to the id
 sym_entry* lookup(string id){
 	sym_table* temp = curr_table;
-
 	while(temp){
 		if((*temp).find(id)!=(*temp).end()) return (*temp)[id];
 		temp = parent_table[temp];
@@ -125,22 +119,24 @@ sym_entry* lookup(string id){
 	return nullptr;
 }
 
+// look up function prototype parameter list
 string funcProtoLookup(string id){
-	// cout<<"hello"<<endl;
 	if(func_arg.find(id)!= func_arg.end())return func_arg[id].first;
 	else return "";
 }
 
+// find total size of local variables a function
 int func_local_size(string name){
 	return gst[name]->size;
-	
 }
 
+// look up for a symbol in current symbol table only (only the current scope)
 sym_entry* currLookup(string id){
 	if((*curr_table).find(id)==(*curr_table).end()) return nullptr;
 	return (*curr_table)[id];
 }
 
+// insert keywords into global symbol table
 void insertKeywords(){
 	vector<string> key_words = {"auto","break","case","char","const","continue","default","do","double","else","enum","extern","float","for","goto","if","int","long","register","return","short","signed","sizeof","static","struct","switch","typedef","union","unsigned","void","volatile","while"}; 
 	vector<string> op = {"...",">>=","<<=","+=","-=","*=","/=","%=","&=","^=","|=",">>","<<","++","--","->","&&","||","<=",">=","==","!=",";","{","<%","}","%>",",",":","=","(",")","[","<:","]",":>",".","&","!","~","-","+","*","/","%","<",">","^","|","?"};
@@ -152,90 +148,72 @@ void insertKeywords(){
 		insertSymbol(*curr_table, h, "operator", 8, 1, nullptr);
 	}
 	
-	// Insert imp functions
+	// important io functions
 	vector<string> type = {"char*", "..."};
-
 	insert_imp_func("printf", type, "int");
-
 	insert_imp_func("scanf", type, "int");
 
-
-	// dynamic alloc functions
+	// dynamic allocation functions
 	type = {"int"};
 	insert_imp_func("malloc", type, "void*");
-
 	type = {"int", "int"};
 	insert_imp_func("calloc", type, "void*");
-
 	type = {"void*"};
 	insert_imp_func("free", type, "void");
 
-
-	// FILE I/O functions
+	// file io functions
 	type = {"char*", "char*"};
 	insert_imp_func("fopen", type, "FILE*");
-
 	type = {"char*", "FILE*"};
 	insert_imp_func("fputs", type, "int");
-
 	type = {"char*", "int", "FILE*"};
 	insert_imp_func("fgets", type, "int");
-
 	type = {"FILE*"};
 	insert_imp_func("fclose", type, "int");
-
 	type = {"FILE*", "char*", "..."};
 	insert_imp_func("fprintf", type, "int");
-
 	type = {"FILE*", "char*", "..."};
 	insert_imp_func("fscanf", type, "int");
-
 	type = {"FILE*"};
 	insert_imp_func("fgetc", type, "char");
-
 	type = {"char", "FILE*"};
 	insert_imp_func("fputc", type, "char");
 
-	// String Functions
-
+	// string Functions
 	type = {"char*"};
 	insert_imp_func("strlen", type, "int");
-
 	type = {"char*", "char*"};
 	insert_imp_func("strcmp", type, "int");
-
 	type = {"char*", "char*", "int"};
 	insert_imp_func("strncmp", type, "int");
-
 	type = {"char*", "char*"};
 	insert_imp_func("strcpy", type, "char*");
-
 	insert_imp_func("strcat", type, "char*");
-
 }
 
+// helper function to insert library functions in symbol table
 void insert_imp_func(string func_name, vector<string> type, string ret_type){
 	insertSymbol(*curr_table, func_name, "FUNC_"+ret_type, 4, 0, nullptr);
 	func_arg.insert({func_name, make_pair("FUNC_"+ret_type, type)});
 	func_usage_map.insert({func_name, 0});
 }
 
+// find the type of a symbol
 string getType(string id){
 	sym_entry* entry = lookup(id);
 	string ret = "";
 	if(entry) ret += entry->type;
-	
 	return ret;
 }
 
-
+// construct struct/ union table
 void createStructTable(){
 	sym_table* new_table = new sym_table;
 	curr_structure = new_table;
 	struct_offset = 0;
 }
 
-// insert struct attributes in struct tsymbol table
+// insert struct/ union members (attributes) in symbol table
 int insertStructAttr(string attr, string type, int size, bool init){  
 	if((*curr_structure).find(attr)==(*curr_structure).end()){
 		blockSz.top()+=size;
@@ -255,10 +233,6 @@ int insertStructAttr(string attr, string type, int size, bool init){
 				(*curr_structure)[attr]->isArray = 1;
 				isArray = 0;
 			}
-			for(int x: temp){
-				cout<<x<<" ";
-			}
-			cout<<"\n";
 			array_dims.clear();
 		}
 		struct_offset += size;
@@ -267,6 +241,7 @@ int insertStructAttr(string attr, string type, int size, bool init){
 	return 0;
 }
 
+// print a struct/ union table into a csv file
 int printStructTable(string struct_name){
 	if((*curr_struct_table).find(struct_name)==(*curr_struct_table).end()){
 		struct_parent_table.insert(make_pair(curr_struct_table, nullptr));
@@ -285,12 +260,12 @@ int printStructTable(string struct_name){
 	return 0;
 }
 
+// used when accessing member of a struct/ union
 sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	struct_sym_table* temp = curr_struct_table;
 	while((*temp).find(struct_name) == (*temp).end()){
 		temp = struct_parent_table[temp];
 	}
-
 	sym_table* table = (*temp)[struct_name].second;
 	sym_entry* struct_entry = lookup(struct_var);
 	sym_entry* t = new sym_entry;
@@ -300,31 +275,25 @@ sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var){
 	t->isArray = ((*table)[id])->isArray;
 	t->array_dims = ((*table)[id])->array_dims;
 	t->addr_descriptor = ((*table)[id])->addr_descriptor;
-	// cout<<id<<" "<<((*table)[id])->offset<<" "<<struct_entry->offset<<" "<<struct_entry->size<<"\n";
 	t->next_use = -1;
 	t->heap_mem = 0;
 	t->is_derefer = 0;
-	
-
 	return t;
 }
 
+// look up the type of a struct member
 string StructAttrType(string struct_name, string id){
 	struct_sym_table* temp = curr_struct_table;
 	while((*temp).find(struct_name) == (*temp).end()){
 		temp = struct_parent_table[temp];
 	}
-
 	sym_table* table = (*temp)[struct_name].second;
-	// todo negation
 	return ((*table)[id]->type);
 }
 
-// TYPE LOOKUPS - All kinds of types <struct, union etc.>
-
+// look up any user defined type (structs or unions)
 int typeLookup(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
-
 	while(temp){
 		if((*temp).find(struct_name)!=(*temp).end()) return 1;
 		temp = struct_parent_table[temp];
@@ -332,35 +301,35 @@ int typeLookup(string struct_name){
 	return 0;
 }
 
+// look up any user defined type (structs or unions) only in the current symbol table (current scope)
 int currTypeLookup(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
 	if((*temp).find(struct_name)!=(*temp).end()) return 1;
-	
 	return 0;
 }
 
+// search for any member of a user defined type
 int findTypeAttr(string struct_name, string id){
-
 	struct_sym_table* temp = curr_struct_table;
-
 	while(temp){
 		if((*temp).find(struct_name)!=(*temp).end()){
-			if((*((*temp)[struct_name].second)).find(id)!=(*((*temp)[struct_name].second)).end()) return 1; // found
-			else return 0; // struct doesnt contain attr id
+			if((*((*temp)[struct_name].second)).find(id)!=(*((*temp)[struct_name].second)).end()) return 1; // found the attr
+			else return 0; // attr id not present
 		}
 		temp = struct_parent_table[temp];
 	}
-	return -1;	// struct table not found
+	return -1;	// struct (or union) not present
 	
 }
 
-
+// initialize creation of a function table
 void createParamList(){
 	Loffset.push(Goffset.top());
 	makeSymbolTable("dummyF_name", "",1);
 	avl = 1;
 }
 
+// create a symbol table entry and put it in the given symbol table
 void insertSymbol(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	table.insert(make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr)));
 	if(type[type.length()-1] == '*' && !array_dims.empty()){
@@ -376,16 +345,13 @@ void insertSymbol(sym_table& table, string id, string type, int size, bool is_in
 			table[id]->isArray = 1;
 			isArray = 0;
 		}
-		for(int x: temp){
-			cout<<x<<" ";
-		}
-		cout<<"\n";
 		array_dims.clear();
 	}
 	blockSz.top()+=size;
 	Goffset.top()+=size;
 }
 
+// insert alternate typedef names into the symbol table with the corresponding type it represents
 void insertTypedef(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
 	table.insert(make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr)));
 	if(type[type.length()-1] == '*' && !array_dims.empty()){
@@ -397,10 +363,6 @@ void insertTypedef(sym_table& table, string id, string type, int size, bool is_i
 		}
 		reverse(temp.begin(), temp.end());
 		table[id]->array_dims = temp;
-		for(int x: temp){
-			cout<<x<<" ";
-		}
-		cout<<"\n";
 		array_dims.clear();
 	}
 	table[id]->storage_class = "typedef";
@@ -408,8 +370,8 @@ void insertTypedef(sym_table& table, string id, string type, int size, bool is_i
 	Goffset.top()+=size;
 }
 
+// insert function parameters into the symbol table of the function
 void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr){
-	cout<<id<<" "<<param_offset-size<<"\n";
 	table.insert(make_pair(id, createEntry(type, size, is_init, param_offset-size, ptr)));
 	if(type[type.length()-1] == '*' && !array_dims.empty()){
 		size = 4;
@@ -421,26 +383,18 @@ void paramInsert(sym_table& table, string id, string type, int size, bool is_ini
 		}
 		reverse(temp.begin(), temp.end());
 		table[id]->array_dims = temp;
-		// if(isArray){
-		// 	table[id]->isArray = 1;
-			
-		// 	isArray = 0;
-		// }
 		table[id]->offset = param_offset - size;
-		for(int x: temp){
-			cout<<x<<" ";
-		}
-		cout<<"\n";
 		array_dims.clear();
 	}
-	// if(type[type.length()-1] == '*') table[id]->is_derefer = 1;
 	param_offset-=size;
 }
 
+// reset parameter offset global variable before insertion
 void clear_paramoffset(){
 	param_offset = -4;
 }
 
+// return the list of function arguments
 vector<string> getFuncArgs(string id){
 	vector<string> temp;
 	temp.push_back("#NO_FUNC");
@@ -448,61 +402,34 @@ vector<string> getFuncArgs(string id){
 	else return temp;
 }
 
+// return the return type of the required function
 string getFuncType(string id){
-
 	if(func_arg.find(id) != func_arg.end()) return func_arg[id].first;
 	return "";
-
 }
 
+// update the init field of an entry
 void updInit(string id){
 	sym_entry* entry = lookup(id);
 	if(entry) entry->init = true;
 }
 
-void updTableSize(string id){
-	sym_entry* entry = lookup(id);
-	if(entry) entry->size = blockSz.top();
-}
-
-void insertFuncArg(string &func, vector<string> &arg,string &tp){
+// update the argument list and return type of a function
+void insertFuncArg(string &func, vector<string> &arg, string &tp){
 	func_arg.insert(make_pair(func, make_pair(string("FUNC_" +tp),arg)));
 }
 
-void insertType(string a, string b){
-	if((*curr_typ).find(b)==(*curr_typ).end()){
-		(*curr_typ).insert(make_pair(a,b));
-	}
-	else{
-		(*curr_typ).insert(make_pair(a, (*curr_typ)[b]));
-	}
-}
-
+// look up a specific user defined type in that is currently in scope
 string lookupType(string a){
 	typ_table* temp = curr_typ;
-
 	while(temp){
 		if((*temp).find(a)==(*temp).end()) return (*temp)[a];
 		temp = typ_parent_table[temp];
 	}
-
 	return "";
 }
 
-void printFuncArg(){
-	FILE* file = fopen("FuncArg.csv","w");
-    for(auto it:func_arg){
-
-    	string temp = "";
-    	for(auto h:it.second.second){
-    		if(temp!="") temp += ", ";
-    		temp+=h;
-    	}
-        fprintf(file,"%s, %s\n",it.first.c_str(),temp.c_str());
-     }
-     fclose(file);
-}
-
+// set global variables
 void setGlobal(){
 	for(auto &it: gst){
 		if(it.second->type.substr(0,2) == "in" || it.second->type.substr(0,2)=="ch"){
@@ -513,6 +440,7 @@ void setGlobal(){
 	}
 }
 
+// write the specified symbol table into a csv file
 void printSymbolTable(sym_table* table, string file_name){
 	if(!dump_sym_table) return;
 	FILE* file = fopen(file_name.c_str(), "w");
@@ -524,9 +452,9 @@ void printSymbolTable(sym_table* table, string file_name){
   	fclose(file);
 }
 
+// return the total size of the user defined datatype
 int getStructsize(string struct_name){
 	struct_sym_table* temp = curr_struct_table;
-
 	while(temp){
 		if((*temp).find(struct_name)!=(*temp).end()){
 			return (*temp)[struct_name].first;
@@ -536,6 +464,7 @@ int getStructsize(string struct_name){
 	return 0;
 }
 
+// return the size of the given datatype
 int getSize(string id){
   if(typeLookup(id)) return getStructsize(id);
   if(1) return 4;
@@ -560,6 +489,5 @@ int getSize(string id){
   if(id == "unsigned long int") return sizeof(unsigned long int);
   if(id == "unsigned long long") return sizeof(unsigned long long);
   if(id == "unsigned long long int") return sizeof(unsigned long long int);
-
-  return 4; // for any ptr
+  return 4;
 }

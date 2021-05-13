@@ -38,23 +38,16 @@ extern sym_table gst;
 extern struct_sym_table struct_gst;
 extern map<sym_table*, sym_table*> parent_table;
 extern map<struct_sym_table*, struct_sym_table*> struct_parent_table;
-
-// extern map<string, int> struct_size;
 extern map<string, pair<string,vector<string> > > func_arg;
 extern int struct_offset;
-extern sym_table* curr_table; //store pointer of the current symbol table
+extern sym_table* curr_table;
 extern sym_table* curr_structure;
 extern struct_sym_table *curr_struct_table;
 extern stack<int> Goffset, Loffset, blockSz;
 extern int avl;
-
-//map<string, string> typ_table;
 extern typ_table typ_gst;  
 extern map<typ_table*, typ_table*> typ_parent_table;
 extern typ_table* curr_typ;
-
-
-
 
 void symTable_init();
 sym_entry* createEntry(string type, int size, bool init, int offset);
@@ -77,18 +70,15 @@ void insertSymbol(sym_table& table, string id, string type, int size, bool is_in
 void insertTypedef(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr);
 vector<string> getFuncArgs(string id);
 void updInit(string id);
-void updTableSize(string id);
 void insertFuncArg(string &func, vector<string> &arg, string &tp);
 string getFuncType(string id);
 string funcProtoLookup(string id);
-void printFuncArg();
 void printSymbolTable(sym_table* table, string file_name);
 int getSize(string id);
 string lookupType(string a);
-void insertType(string a, string b);
 void clear_paramoffset();
 void paramInsert(sym_table& table, string id, string type, int size, bool is_init, sym_table* ptr);
-int func_local_size(string name); // returns bytes required for local variables in a function
+int func_local_size(string name);
 sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var);
 int getStructsize(string struct_name);
 void insert_imp_func(string func_name, vector<string> type, string ret_type);

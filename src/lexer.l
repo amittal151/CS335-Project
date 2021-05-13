@@ -32,8 +32,7 @@ extern FILE* lexer_file;
 
 "/*"([^*]|(\*+[^*/]))*\*+\/		{ count(0); }
 
-"//"[^\n]*      { /* consume //-comment */ }
-
+"//"[^\n]*      { /*comment*/ }
 
 "auto"			{ if( only_lexer ) fprintf(lexer_file,"AUTO\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(AUTO); }
 "break"			{ if( only_lexer ) fprintf(lexer_file,"BREAK\t\t\t"); yylval.str = strdup(yytext); count(1); return(BREAK); }
@@ -104,33 +103,34 @@ L?\"(\\.|[^\\"])*\"		{ if( only_lexer ) fprintf(lexer_file,"STRING_LITERAL\t"); 
 ">="			{ if( only_lexer ) fprintf(lexer_file,"GE_OP\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(GE_OP); }
 "=="			{ if( only_lexer ) fprintf(lexer_file,"EQ_OP\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(EQ_OP); }
 "!="			{ if( only_lexer ) fprintf(lexer_file,"NE_OP\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(NE_OP); }
-";"			{ if( only_lexer ) fprintf(lexer_file,";\t\t\t\t");  yylval.str = strdup(yytext); count(1); return(';'); }
+";"				{ if( only_lexer ) fprintf(lexer_file,";\t\t\t\t");  yylval.str = strdup(yytext); count(1); return(';'); }
 ("{"|"<%")		{ if( only_lexer ) fprintf(lexer_file,"{\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('{'); }
 ("}"|"%>")		{ if( only_lexer ) fprintf(lexer_file,"}\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('}'); }
-","			{ if( only_lexer ) fprintf(lexer_file,",\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(','); }
-":"			{ if( only_lexer ) fprintf(lexer_file,":\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(':'); }
-"="			{ if( only_lexer ) fprintf(lexer_file,"=\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('='); }
-"("			{ if( only_lexer ) fprintf(lexer_file,"(\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('('); }
-")"			{ if( only_lexer ) fprintf(lexer_file,")\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(')'); }
+","				{ if( only_lexer ) fprintf(lexer_file,",\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(','); }
+":"				{ if( only_lexer ) fprintf(lexer_file,":\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(':'); }
+"="				{ if( only_lexer ) fprintf(lexer_file,"=\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('='); }
+"("				{ if( only_lexer ) fprintf(lexer_file,"(\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('('); }
+")"				{ if( only_lexer ) fprintf(lexer_file,")\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(')'); }
 ("["|"<:")		{ if( only_lexer ) fprintf(lexer_file,"[\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('['); }
 ("]"|":>")		{ if( only_lexer ) fprintf(lexer_file,"]\t\t\t\t"); yylval.str = strdup(yytext); count(1); return(']'); }
-"."			{ if( only_lexer ) fprintf(lexer_file,".\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('.'); }
-"&"			{ if( only_lexer ) fprintf(lexer_file,"&\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('&'); }
-"!"			{ if( only_lexer ) fprintf(lexer_file,"!\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('!'); }
-"~"			{ if( only_lexer ) fprintf(lexer_file,"~\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('~'); }
-"-"			{ if( only_lexer ) fprintf(lexer_file,"-\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('-'); }
-"+"			{ if( only_lexer ) fprintf(lexer_file,"+\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('+'); }
-"*"			{ if( only_lexer ) fprintf(lexer_file,"*\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('*'); }
-"/"			{ if( only_lexer ) fprintf(lexer_file,"/\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('/'); }
-"%"			{ if( only_lexer ) fprintf(lexer_file,"%%\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('%'); }
-"<"			{ if( only_lexer ) fprintf(lexer_file,"<\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('<'); }
-">"			{ if( only_lexer ) fprintf(lexer_file,">\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('>'); }
-"^"			{ if( only_lexer ) fprintf(lexer_file,"^\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('^'); }
-"|"			{ if( only_lexer ) fprintf(lexer_file,"|\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('|'); }
-"?"			{ if( only_lexer ) fprintf(lexer_file,"?\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('?'); }
+"."				{ if( only_lexer ) fprintf(lexer_file,".\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('.'); }
+"&"				{ if( only_lexer ) fprintf(lexer_file,"&\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('&'); }
+"!"				{ if( only_lexer ) fprintf(lexer_file,"!\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('!'); }
+"~"				{ if( only_lexer ) fprintf(lexer_file,"~\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('~'); }
+"-"				{ if( only_lexer ) fprintf(lexer_file,"-\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('-'); }
+"+"				{ if( only_lexer ) fprintf(lexer_file,"+\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('+'); }
+"*"				{ if( only_lexer ) fprintf(lexer_file,"*\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('*'); }
+"/"				{ if( only_lexer ) fprintf(lexer_file,"/\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('/'); }
+"%"				{ if( only_lexer ) fprintf(lexer_file,"%%\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('%'); }
+"<"				{ if( only_lexer ) fprintf(lexer_file,"<\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('<'); }
+">"				{ if( only_lexer ) fprintf(lexer_file,">\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('>'); }
+"^"				{ if( only_lexer ) fprintf(lexer_file,"^\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('^'); }
+"|"				{ if( only_lexer ) fprintf(lexer_file,"|\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('|'); }
+"?"				{ if( only_lexer ) fprintf(lexer_file,"?\t\t\t\t"); yylval.str = strdup(yytext); count(1); return('?'); }
 
 [ \t\v\n\f]		{ count(0); }
-.			{ if( only_lexer ) fprintf(lexer_file, "Unknown character\(s\): %s\n", yytext); return -1;}
+
+.				{ if( only_lexer ) fprintf(lexer_file, "Unknown character\(s\): %s\n", yytext); return -1;}
 
 %%
 
@@ -139,6 +139,7 @@ int yywrap()
 	return(1);
 }
 
+// maintain line and column number
 void count(int flag)
 {
 	int i;
@@ -147,27 +148,27 @@ void count(int flag)
         if( only_lexer ) fprintf(lexer_file,"%d\t\t%d\n",line, column);
     }
 
-	for (i = 0; yytext[i] != '\0'; i++)
+	for (i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n'){
 			column = 0;
             line ++;
         }
 		else if (yytext[i] == '\t')
-			column += 4 - (column% 4);
+			column += 4 - (column % 4);
 		else
 			column++;
+	}
 }
 
+// set type as int and read integer value correctly depending on the base
 void set_int_type(int t){
-	// 3-> Hexa, 2-> Octal, 1-> decimal, 0-> Char
-	yylval.num = new constants ;
+	yylval.num = new constants;
 	yylval.num->str = strdup(yytext);
 	yylval.num->type = string("int");
 	switch(t){
+		// 3-> hexadecimal, 2-> octal, 1-> decimal, 0-> char
 		case 0 : {
-			// cout<<yytext<<"\n";
 			sscanf(yytext, "%", &(yylval.num->intVal));
-			// yylval.num->intVal = (int)yytext[strlen(yytext)-2];
 			yylval.num->intVal = char_int(yylval.num->str);
 			yylval.num->type = "char";
 			break;
@@ -187,6 +188,7 @@ void set_int_type(int t){
 	}
 }
 
+// convert character to an integer value
 int char_int(string str){
     if(str[1] == '\\'){
         string s = str.substr(1,2);
@@ -194,10 +196,11 @@ int char_int(string str){
         if(s == "\\n") return 10;
         if(s == "\\t") return 9;
     } 
-    int val = (int )str[1];
+    int val = (int)str[1];
     return (val);
 }
 
+// set type as float and read the real value
 void set_real_type(){
 	yylval.num = new constants ;
 	yylval.num->str = strdup(yytext);
@@ -205,91 +208,13 @@ void set_real_type(){
 	sscanf(yytext, "%lf", &(yylval.num->realVal));
 }
 
+// check if yytext is an actual identifier or a typdef datatype
 int check_type()
 {
-	
-
-/*
-*	it actually will only return IDENTIFIER
-*/
 	sym_entry* find_it = lookup(string(yytext));
 	if(find_it){
 		if(find_it->storage_class == "typedef") return TYPE_NAME;
 		else return IDENTIFIER;
 	}
-
 	return(IDENTIFIER);
 }
-
-
-// void print_options(){
-// 	// To be constructed later
-// 	cout<<"\t--help\t\t\tDisplay available options\n";
-
-// 	cout<<"\n\n";
-// }
-
-// int main(int argc, char* argv[]){
-	
-// 	if(argc <= 1){
-//     	cout<<"Error: no input files\n";
-//   		return -1;
-//   	}
-  	
-//   	for(int i = 1; i<argc; i++){
-//   		if(!strcmp(argv[i], "--help")){
-// 			goto help;
-// 		}
-//   	}
-  	
-// 	for(int i = 1; i<argc; i++){
-// 		yyin = fopen(argv[i], "r");
-		
-// 		// File open failed, proceeding to next file(s), if exist
-// 		if(yyin == NULL){
-// 			cout<<"Error: cannot open file "<<argv[i]<<"\n\n";
-// 			continue;
-// 		}
-		
-// 		yyrestart(yyin);
-
-// 		line = 1, column = 0;
-// 		cout<<"---------Output for file "<<argv[i]<<"----------\n";
-// 		cout<<"Token\t\tLexeme\t\tLine#\t\tColumn#\t\t\n";
-	
-// 		while( yylex() > 0 ){
-		
-// 		}
-// 		cout<<"---------------------------------------------------\n";
-// 	}
-	
-// 	return 0;
-	
-// 	help:
-// 	cout<<"OVERVIEW: C Compiler Lexer\n\n";
-// 	cout<<"USAGE: lexer [options] file1 file2 ...\n\n";
-// 	cout<<"OPTIONS:\n";
-// 	print_options();
-// 	return 0;
-	
-// }
-
-
-
-// SYMBOL_TABLE
-// struct node;
-// STRUCT ENTRY		- {
-// 	vector<string>  int a, int b;
-// 	a - >int
-// 	b -> int
-// }
-// ENUM ENTRY 
-// TYPEDEF ENTRY 
-
-// STRUCT_symbol_table
-// enum_table
-
-// TypeMap -- node > STRUCT, node1 > ENUM, ll -> long long
-
-
-// map<string, sentry>
