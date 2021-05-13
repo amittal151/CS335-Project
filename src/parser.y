@@ -36,7 +36,8 @@ int if_found = 0;
 int previous_if_found = 0;
 int stop_compiler = 0;		// shows error while parsing
 int isArray = 0;			// true when array is declared
-int type_delim = 0;			
+int type_delim = 0;	
+int debug_mode = 0;		
 string funcName = "";
 string structName = "";
 string funcType = "";
@@ -3560,8 +3561,9 @@ void print_options(){
 	cout<<"\t--help\t\t\tDisplay available options\n";
 	cout<<"\t-l <file>\t\tonly runs the lexer and dumps output in <file>\n";
 	cout<<"\t-o <file>\t\tdump the dot script generated in <file>\n";
+	cout<<"\t-debug\t\tprint the corresponding 3AC code with instructions in asm file\n";
 	cout<<"\t-dump-sym-table\t\tdump the symbol tables corresponding to the defined types and functions\n";
-	cout<<"\t-dump-tac\t\tdump the intermediate 3ac in intermediate_3ac.txt\n";
+	cout<<"\t-dump-tac\t\tdump the intermediate 3ac in intermediate_3ac.csv\n";
 	cout<<"\n\n";
 }
 
@@ -3619,7 +3621,7 @@ int warning(const char* s) {
 
 int main(int argc, char* argv[]){
 	
-	char* file_name = "graph.dot", *lexer_file_name;
+	char* file_name = "gen_code.asm", *lexer_file_name;
 	int file_present = 0;
 
 	if(argc <= 1){
@@ -3661,6 +3663,7 @@ int main(int argc, char* argv[]){
 		else if(!strcmp(argv[i], "-dump-sym-table")) dump_sym_table = 1;
 		else if(!strcmp(argv[i], "-dump-tac")) dump_tac = 1;
 		else if(!strcmp(argv[i], "-dump-all")) dump_tac = dump_sym_table = 1;
+		else if(!strcmp(argv[i], "-debug")) debug_mode = 1;
 		else if(argv[i][0] != '-') file_present++;
 	}
 
@@ -3683,6 +3686,7 @@ int main(int argc, char* argv[]){
 				i++;
 				continue;
 			}
+			else if(argv[i][0] == '-') continue;
 
 			yyin = fopen(argv[i], "r");
 			
@@ -3707,21 +3711,22 @@ int main(int argc, char* argv[]){
 
 	}
 
-	dotfile = fopen(file_name, "w");
+	dotfile = fopen("AST.dot", "w");
 	
 	if(dotfile == NULL){
 		print_error();
-		cout<<"cannot open the dot file "<<file_name<<"\nCompilation terminated\n";
+		cout<<"cannot open the dot file AST.dot"<<"\nCompilation terminated\n";
 		return -1;
 	}
 	symTable_init();
 	beginAST();
 	
 	for(int i = 1; i<argc; i++){
-		if(!strcmp(argv[i], "-o")){
-			i++;
-			continue;
+		if(!strcmp(argv[i], "-o") || !strcmp(argv[i], "-l")){
+				i++;
+				continue;
 		}
+		else if(argv[i][0] == '-') continue;
 
 		yyin = fopen(argv[i], "r");
 		
@@ -3744,8 +3749,7 @@ int main(int argc, char* argv[]){
 
 	if(!stop_compiler){
 
-		code_file.open("gen_code.asm");
-		
+		code_file.open(file_name);
 		setGlobal();
 		if(dump_tac) print3AC_code();
 		genCode();

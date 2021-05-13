@@ -17,6 +17,7 @@ set<string> exclude_this;           // to exclude certain registers from a getRe
 
 qid empty_var("", NULL);
 
+extern int debug_mode;
 extern vector<quad> code;
 extern ofstream code_file;
 extern map<string, int> func_usage_map;
@@ -970,7 +971,7 @@ void genCode(){
             if(instr.arg1.first != "") instr.arg1.first = char_to_int(instr.arg1.first);
             if(instr.arg2.first != "") instr.arg2.first = char_to_int(instr.arg2.first);
             
-            code_file<<"\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
+            if(debug_mode) code_file<<"\t\t\t\t\t\t\t\t\t\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
             
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
                 in_func = 1;
