@@ -1,6 +1,6 @@
 #include "typecheck.h"
 
-
+//RETURNS THE TYPE OF IDENTIFIER id USING lookup
 string primaryExpression(string id) {
     sym_entry* n = lookup(id);
     if(n) {
@@ -12,8 +12,8 @@ string primaryExpression(string id) {
         temp += "#";
     }
     return temp; 
-    // return funcProtoLookup(id);// search function prototype declaration
 }
+
 string constantEx(int numType ){
     switch(numType){
         case 1: return "int";
@@ -34,11 +34,11 @@ string postfixExpression(string type_name, int rule_num) {
             return "";
         }
         case 2:{
-            if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5); //TODO
+            if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5); 
             return "";
         }
         case 3:{
-            if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5); //TODO
+            if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5);
             return "";
         }
         case 6:{
@@ -50,7 +50,6 @@ string postfixExpression(string type_name, int rule_num) {
             return "";
         }
         default : return "";
-        
     }   
 }
 
