@@ -432,7 +432,7 @@ postfix_expression
 				qid q = newtemp(temp);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit(qid("++S", lookup("++")), $1->place, qid("", NULL), q, -1);
+				emit(qid("++S", NULL), $1->place, qid("", NULL), q, -1);
 			}
 			else{
 				yyerror("Increment not defined for this type");
@@ -466,7 +466,7 @@ postfix_expression
 				qid q = newtemp(temp);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit(qid("--S", lookup("--")), $1->place, qid("", NULL), q, -1);
+				emit(qid("--S", NULL), $1->place, qid("", NULL), q, -1);
 
 			}
 			else{
@@ -556,7 +556,7 @@ unary_expression
 				qid q = newtemp(temp);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit(qid("++P", lookup("++")), $2->place, qid("", NULL), q, -1);
+				emit(qid("++P", NULL), $2->place, qid("", NULL), q, -1);
 			}
 			else{
 				yyerror("Increment not defined for this type");
@@ -587,7 +587,7 @@ unary_expression
 				qid q = newtemp(temp);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit(qid("--P", lookup("--")), $2->place, qid("", NULL), q, -1);
+				emit(qid("--P", NULL), $2->place, qid("", NULL), q, -1);
 			}
 			else{
 				yyerror("Decrement not defined for this type");
@@ -645,7 +645,7 @@ unary_expression
 			qid q = newtemp("int");
 			$$->place = q;
 			$$->nextlist.clear();
-			emit(qid("SIZEOF", lookup("sizeof")), $2->place, qid("", NULL), q, -1);
+			emit(qid("SIZEOF", NULL), $2->place, qid("", NULL), q, -1);
 		}
 		else{
 			if($2->expType==4){
@@ -677,7 +677,7 @@ unary_expression
 			arg1.second->type = $3->type;
 			arg1.first = $3->type;
 			arg1.second->size = getSize(arg1.first);
-			emit(qid("SIZEOF", lookup("sizeof")), arg1, qid("", NULL), q, -1);
+			emit(qid("SIZEOF", NULL), arg1, qid("", NULL), q, -1);
 		}
 		else{
 			if($3->expType==4){
@@ -791,7 +791,7 @@ multiplicative_expression
 						qid q = newtemp("int");
 						$$->place = q;
 						$$->nextlist.clear();
-						emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
+						emit(qid("*int", NULL), $1->place, $3->place, q, -1);
 					}
 					else if(temp == "float"){
 						$$->type = "float";
@@ -806,15 +806,15 @@ multiplicative_expression
 							qid q1 = newtemp($$->type);
 							emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
 
-							emit(qid("*real", lookup("*")), q1, $3->place, q, -1);
+							emit(qid("*real", NULL), q1, $3->place, q, -1);
 						}
 						else if(isInt($3->type)){
 							qid q1 = newtemp($$->type);
 							emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
-							emit(qid("*real", lookup("*")), $1->place, q1, q, -1);
+							emit(qid("*real", NULL), $1->place, q1, q, -1);
 						}
 						else{
-							emit(qid("*real", lookup("*")), $1->place, $3->place, q, -1);
+							emit(qid("*real", NULL), $1->place, $3->place, q, -1);
 						}
 					}
 				}
@@ -856,7 +856,7 @@ multiplicative_expression
 						qid q = newtemp("int");
 						$$->place = q;
 						$$->nextlist.clear();
-						emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
+						emit(qid("/int", NULL), $1->place, $3->place, q, -1);
 					}
 					else if(temp == "float"){
 						$$->type = "float";
@@ -869,16 +869,16 @@ multiplicative_expression
 							qid q1 = newtemp($$->type);
 							emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
 
-							emit(qid("/real", lookup("/")), q1, $3->place, q, -1);
+							emit(qid("/real", NULL), q1, $3->place, q, -1);
 						}
 						else if(isInt($3->type)){
 							qid q1 = newtemp($$->type);
 							emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
 
-							emit(qid("/real", lookup("/")), $1->place, q1, q, -1);
+							emit(qid("/real", NULL), $1->place, q1, q, -1);
 						}
 						else{
-							emit(qid("/real", lookup("/")), $1->place, $3->place, q, -1);
+							emit(qid("/real", NULL), $1->place, $3->place, q, -1);
 						}
 					}
 				}
@@ -915,7 +915,7 @@ multiplicative_expression
 				else{
 					qid q = newtemp("int");
 					$$->place = q;
-					emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
+					emit(qid("%", NULL), $1->place, $3->place, q, -1);
 				}
 				$$->nextlist.clear();
 
@@ -972,15 +972,15 @@ additive_expression
 					if(cond1){
 						qid temp2 = newtemp($3->type);
 						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-						emit(qid("+"+temp, lookup("+")), temp2, $3->place, temp1, -1);
+						emit(qid("+"+temp, NULL), temp2, $3->place, temp1, -1);
 					}
 					else if(cond2){
 						qid temp2 = newtemp($1->type);
 						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-						emit(qid("+"+temp, lookup("+")), $1->place, temp2, temp1, -1);
+						emit(qid("+"+temp, NULL), $1->place, temp2, temp1, -1);
 					}
 					else{
-						emit(qid("+"+temp, lookup("+")), $1->place, $3->place, temp1, -1);
+						emit(qid("+"+temp, NULL), $1->place, $3->place, temp1, -1);
 					}
 					$$->place = temp1;
 				}
@@ -1029,15 +1029,15 @@ additive_expression
 					if(cond1){
 						qid temp2 = newtemp($3->type);
 						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-						emit(qid("-"+temp, lookup("-")), temp2, $3->place, temp1, -1);
+						emit(qid("-"+temp, NULL), temp2, $3->place, temp1, -1);
 					}
 					else if(cond2){
 						qid temp2 = newtemp($1->type);
 						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-						emit(qid("-"+temp, lookup("-")), $1->place, temp2, temp1, -1);
+						emit(qid("-"+temp, NULL), $1->place, temp2, temp1, -1);
 					}
 					else{
-						emit(qid("-"+temp, lookup("-")), $1->place, $3->place, temp1, -1);
+						emit(qid("-"+temp, NULL), $1->place, $3->place, temp1, -1);
 					}
 					$$->place = temp1;
 				}
@@ -1081,7 +1081,7 @@ shift_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("<<", lookup("<<")), $1->place, $3->place, temp1, -1);
+					emit(qid("<<", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1119,7 +1119,7 @@ shift_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid(">>", lookup(">>")), $1->place, $3->place, temp1, -1);
+					emit(qid(">>", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1170,7 +1170,7 @@ relational_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("<", lookup("<")), $1->place, $3->place, temp1, -1);
+					emit(qid("<", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1; 
 				}
 				$$->nextlist.clear();
@@ -1216,7 +1216,7 @@ relational_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid(">", lookup(">")), $1->place, $3->place, temp1, -1);
+					emit(qid(">", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1; 
 				}
 				$$->nextlist.clear();
@@ -1259,7 +1259,7 @@ relational_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("<=", lookup("<=")), $1->place, $3->place, temp1, -1);
+					emit(qid("<=", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1; 
 				}
 				$$->nextlist.clear();
@@ -1302,7 +1302,7 @@ relational_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid(">=", lookup(">=")), $1->place, $3->place, temp1, -1);
+					emit(qid(">=", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1350,7 +1350,7 @@ equality_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("==", lookup("==")), $1->place, $3->place, temp1, -1);
+					emit(qid("==", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1391,7 +1391,7 @@ equality_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("!=", lookup("!=")), $1->place, $3->place, temp1, -1);
+					emit(qid("!=", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1; 
 				}
 				$$->nextlist.clear();
@@ -1435,7 +1435,7 @@ and_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("&", lookup("&")), $1->place, $3->place, temp1, -1);
+					emit(qid("&", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1479,7 +1479,7 @@ exclusive_or_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("^", lookup("^")), $1->place, $3->place, temp1, -1);
+					emit(qid("^", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1; 
 				}
 				$$->nextlist.clear();
@@ -1524,7 +1524,7 @@ inclusive_or_expression
 				}
 				else{
 					qid temp1 = newtemp($$->type);
-					emit(qid("|", lookup("|")), $1->place, $3->place, temp1, -1);
+					emit(qid("|", NULL), $1->place, $3->place, temp1, -1);
 					$$->place = temp1;
 				}
 				$$->nextlist.clear();
@@ -1558,14 +1558,14 @@ logical_and_expression
 			// 3AC
 			if($3->truelist.empty() && if_found){
 				backpatch($3->nextlist, code.size());
-				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
-				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$3->falselist.push_back(code.size()-1);
 			}
 			else {
 				qid tmp = newtemp($$->type);
-				emit(qid("&&", lookup("&&")), $1->place, $3->place, tmp, -1);
+				emit(qid("&&", NULL), $1->place, $3->place, tmp, -1);
 				$$->place = tmp;
 			}
 			backpatch($1->truelist, $2);
@@ -1586,9 +1586,9 @@ GOTO_AND
 		if(!$1->is_error){
 			if($1->truelist.empty() && if_found){
 				backpatch($1->nextlist, code.size());
-				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
-				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$1->falselist.push_back(code.size()-1);
 			}
 		}
@@ -1615,14 +1615,14 @@ logical_or_expression
 			// 3AC
 			if($3->truelist.empty() && if_found){
 				backpatch($3->nextlist, code.size());
-				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
 				$3->truelist.push_back(code.size()-1);
-				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$3->falselist.push_back(code.size()-1);
 			}
 			else {
 				qid tmp = newtemp($$->type);
-				emit(qid("||", lookup("||")), $1->place, $3->place, tmp, -1);
+				emit(qid("||", NULL), $1->place, $3->place, tmp, -1);
 				$$->place = tmp;
 			}
 			backpatch($1->falselist, $2);
@@ -1642,9 +1642,9 @@ GOTO_OR
 		if(!$1->is_error){
 			if($1->truelist.empty() && if_found){
 				backpatch($1->nextlist, code.size());
-				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
-				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$1->falselist.push_back(code.size()-1);
 			}
 		}
@@ -1691,7 +1691,7 @@ conditional_expression
 				backpatch($7->falselist, code.size());
 				backpatch($7->truelist, code.size());
 
-				emit(qid("=", lookup("=")), $7->place, qid("", NULL), temp1, -1);
+				emit(qid("=", NULL), $7->place, qid("", NULL), temp1, -1);
 				$$->nextlist.push_back($4);
 				$$->place = temp1;
 			}
@@ -1714,9 +1714,9 @@ GOTO_COND
 		if(!$1->is_error){
 			if($1->truelist.empty()){
 				backpatch($1->nextlist, code.size());
-				emit(qid("GOTO", lookup("goto")), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
 				$1->truelist.push_back(code.size()-1);
-				emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+				emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 				$1->falselist.push_back(code.size()-1);
 			}
 		}
@@ -1726,8 +1726,8 @@ GOTO_COND
 
 WRITE_GOTO
 	: %empty {
-		emit(qid("=", lookup("=")), qid("", NULL), qid("", NULL), qid("", NULL), -1);
-		emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+		emit(qid("=", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+		emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
 		$$ = code.size()-1;
 	}
 	;
@@ -2981,11 +2981,11 @@ CASE_CODE
         $$ = $2;
 		qid t = newtemp($$->type);
 		int a = code.size();
-		emit(pair <string, sym_entry*>("==", lookup("==")), pair <string, sym_entry*>("", NULL), $2->place, t, -1);
+		emit(pair <string, sym_entry*>("==", NULL), pair <string, sym_entry*>("", NULL), $2->place, t, -1);
 		int b = code.size();
-		emit(pair <string, sym_entry*>("GOTO", lookup("goto")), pair <string, sym_entry*>("IF", lookup("if")), t, pair <string, sym_entry*>("", NULL), 0);
+		emit(pair <string, sym_entry*>("GOTO", NULL), pair <string, sym_entry*>("IF", lookup("if")), t, pair <string, sym_entry*>("", NULL), 0);
 		int c = code.size();
-		emit(pair <string, sym_entry*>("GOTO", lookup("goto")), pair <string, sym_entry*>("", NULL), pair <string, sym_entry*>("", NULL), pair <string, sym_entry*>("", NULL), 0);
+		emit(pair <string, sym_entry*>("GOTO", NULL), pair <string, sym_entry*>("", NULL), pair <string, sym_entry*>("", NULL), pair <string, sym_entry*>("", NULL), 0);
 		$$->caselist.push_back(a);
 		$$->truelist.push_back(b);
 		$$->falselist.push_back(c);
@@ -3117,9 +3117,9 @@ IF_CODE
         if($4->truelist.empty() && $4->falselist.empty()) {
             int a = code.size();
 			backpatch($4->nextlist, a);
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
             int b = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
             $4->truelist.push_back(a);
             $4->falselist.push_back(b);
         }
@@ -3132,7 +3132,7 @@ N
     : %empty {
         int a = code.size();
 		$$ = new treeNode;
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         $$->nextlist.push_back(a);
     }
     ;
@@ -3197,9 +3197,9 @@ EXPR_CODE
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
 			backpatch($2->nextlist, a);
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
@@ -3213,9 +3213,9 @@ EXPR_STMT_CODE
 		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = code.size();
 			backpatch($2->nextlist, a);
-            emit(qid("GOTO", lookup("goto")),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
             int b = code.size();
-            emit(qid("GOTO", lookup("goto")),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
@@ -3240,7 +3240,7 @@ iteration_statement
         backpatch($7->nextlist, $3);
         $$->nextlist = $4->falselist;
         $$->nextlist.insert($$->nextlist.end(), $7->breaklist.begin(), $7->breaklist.end());
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), $3);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $3);
     }
 	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';'	{
 		vector<data> v;
@@ -3275,7 +3275,7 @@ iteration_statement
 		$$->nextlist.insert($$->nextlist.end(), $8->breaklist.begin(), $8->breaklist.end());
         $8->nextlist.insert($8->nextlist.end(), $8->continuelist.begin(), $8->continuelist.end());
         backpatch($8->nextlist, $4);
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), $4);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $4);
     }
 	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement	{
 		vector<data> v;
@@ -3297,7 +3297,7 @@ iteration_statement
         backpatch($11->nextlist, $6);
 		$7->nextlist.insert($7->nextlist.end(), $8->nextlist.begin(), $8->nextlist.end());
         backpatch($7->nextlist, $4);
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), $6);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $6);
     }
 	;
 
@@ -3309,27 +3309,27 @@ jump_statement
         $$ = makeleaf(s);
 
         int a = code.size();
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         gotolablelist[$2].push_back(a);
     }
 	| CONTINUE ';'	{
         $$ = makeleaf($1);
 
         int a = code.size();
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         $$->continuelist.push_back(a);
     }
 	| BREAK ';'		{
         $$ = makeleaf($1);
         
         int a = code.size();
-        emit(qid("GOTO", lookup("goto")), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         $$->breaklist.push_back(a);
     }
 	| RETURN ';'	{
 		$$ = makeleaf($1);
 
-        emit(qid("RETURN", lookup("return")), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        emit(qid("RETURN", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
 	}
 	| RETURN expression ';'	{
 		vector<data> v;
@@ -3341,7 +3341,7 @@ jump_statement
 			$$->is_error = 1;
 		}
 		backpatch($2->nextlist,code.size());
-        emit(qid("RETURN", lookup("return")), $2->place, qid("", NULL), qid("", NULL), -1);
+        emit(qid("RETURN", NULL), $2->place, qid("", NULL), qid("", NULL), -1);
 	}
 	;
 

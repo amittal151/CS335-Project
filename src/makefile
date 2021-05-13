@@ -10,7 +10,7 @@ $(SRC)/lexer.cpp: $(SRC)/lexer.l
 	flex -o $@ $^
 	
 $(SRC)/parser.cpp: $(SRC)/parser.y
-	bison -d --verbose -o $@ $^
+	bison -d -o $@ $^
 
 clean:
 	rm -rf $(BIN)/ 
