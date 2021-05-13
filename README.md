@@ -42,3 +42,37 @@ The compiler dumps the symbol table of each function and struct defined. We also
 The C Lex specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-l.html)
 
 The C Grammar specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html)
+
+
+## Milestone 5: The Destination
+
+Steps to build the compiler are given above.   
+Target Language : x86_32.    
+Assembler : nasm.      
+We link the code using gcc.  
+
+
+### Features :
+Our Compiler most of the basic C features like : 
+
+a. Native Data Types ( int , char only ).  
+b. Variables and Expressions (global Variables supported).     
+c. Control Structures - (loops, conditional statements).       
+d. Arrays.     
+e. Functions (Recursion, Mutual Recursion).     
+f. User defined Types (union, struct - with Typedef too ).    
+g. Input/Output Functions (printf, scanf)
+   
+### Advanced Features :     
+    
+h. MultiDimensional Arrays.  
+i. Dynamic Memory    
+j. Library Functions (malloc and string functions).  
+k. Multilevel Pointers.  
+l. Basic FILE I/O.  
+m. Optimisations :   
+>> i) DeadCode elimination.  
+>> ii) Jumps to jump.  
+>> iii) Constant Folding  
+
+We have not supported Floating point.  
