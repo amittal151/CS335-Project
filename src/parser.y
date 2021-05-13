@@ -3561,7 +3561,7 @@ void print_options(){
 	cout<<"\t--help\t\t\tDisplay available options\n";
 	cout<<"\t-l <file>\t\tonly runs the lexer and dumps output in <file>\n";
 	cout<<"\t-o <file>\t\tdump the dot script generated in <file>\n";
-	cout<<"\t-debug\t\tprint the corresponding 3AC code with instructions in asm file\n";
+	cout<<"\t-debug\t\t\tprint the corresponding 3AC code with instructions in asm file\n";
 	cout<<"\t-dump-sym-table\t\tdump the symbol tables corresponding to the defined types and functions\n";
 	cout<<"\t-dump-tac\t\tdump the intermediate 3ac in intermediate_3ac.csv\n";
 	cout<<"\n\n";
