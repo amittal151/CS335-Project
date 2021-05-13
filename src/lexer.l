@@ -19,6 +19,7 @@ int error_handler();
 void print_options();
 void set_int_type(int);
 void set_real_type();
+int char_int(string str);
 int column = 0;
 int line = 1;
 
@@ -164,7 +165,11 @@ void set_int_type(int t){
 	yylval.num->type = string("int");
 	switch(t){
 		case 0 : {
-			sscanf(yytext, "%d", &(yylval.num->intVal));
+			// cout<<yytext<<"\n";
+			sscanf(yytext, "%", &(yylval.num->intVal));
+			// yylval.num->intVal = (int)yytext[strlen(yytext)-2];
+			yylval.num->intVal = char_int(yylval.num->str);
+			yylval.num->type = "char";
 			break;
 		}
 		case 1 : {
@@ -180,6 +185,17 @@ void set_int_type(int t){
 			break;
 		}
 	}
+}
+
+int char_int(string str){
+    if(str[1] == '\\'){
+        string s = str.substr(1,2);
+        if(s == "\\0") return 0;
+        if(s == "\\n") return 10;
+        if(s == "\\t") return 9;
+    } 
+    int val = (int )str[1];
+    return (val);
 }
 
 void set_real_type(){

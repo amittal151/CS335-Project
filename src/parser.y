@@ -43,6 +43,7 @@ int isArray = 0;	// true when array is declared
 int type_delim = 0;
 vector<qid> initializer_list_values;
 map<string, int> func_usage_map;
+map<string, vector<qid>> global_array_init_map;
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -145,7 +146,7 @@ primary_expression
 		//--3AC
 		sym_entry* temp = new sym_entry;
 		//$$->place = qid(to_string($1->intVal), temp);
-		if($1->type != "char" )$$->place = qid(to_string($1->intVal), temp);
+		if($1->type != "char" ) $$->place = qid(to_string($1->intVal), temp);
 		else $$->place = qid($1->str, temp);
 		$$->nextlist.clear();
 
@@ -2021,7 +2022,7 @@ init_declarator
 				if(storage_class != "typedef"){
 					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 					$$->place = qid($1->temp_name, lookup($1->temp_name));
-					isArray = 1;
+					isArray = 0;
 				}
 				else{
 					insertTypedef(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
@@ -2045,10 +2046,11 @@ init_declarator
 				$$->is_error = 1;
 			}
 			else{
-				$1->size = max($1->size, (int)initializer_list_values.size()*4);
-				cout<<$1->size<<"\n";
+				if(typeLookup($1->type) && $1->type[0] == 'u') $1->size = getSize($1->type);
+				else $1->size = max($1->size, (int)initializer_list_values.size()*4);
 				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			}
+			
 			// string a = checkType($1->type, $4->type);
 			if(!isVoid($1->type)){
 				cout<<"HERE\n";
@@ -2057,7 +2059,7 @@ init_declarator
 				$1->place = qid($1->temp_name, entry);
 				
 				
-				if(entry->isArray || (typeLookup($1->type) && $1->type.substr(0, 7) == "STRUCT_")){
+				if(entry->isArray || (typeLookup($1->type) && $1->type.substr(0, 7) == "struct_")){
 					// cout<<"HERE @\n";
 					// cout<<lookup($1->temp_name)->offset<<" "<<$1->temp_name<<"\n";
 					// cout<<
@@ -2074,7 +2076,7 @@ init_declarator
 						i+=4;
 						emit(qid("=", NULL), x, qid("", NULL), temp, -1);
 					}
-					// cout<<"\n";
+					global_array_init_map.insert({$1->temp_name, initializer_list_values});
 				}
 				else if(typeLookup($1->type) && !lookup($4->temp_name)){
 					

@@ -51,3 +51,5 @@ void sizeof_op(quad* instr);
 vector<int> findDeadCode();
 void jumpOptimisation();
 string char_to_int(string sym);
+void print_global_data();
+string get_type_size(string sym);

@@ -24,7 +24,7 @@ int avl=0;
 extern int isArray;
 extern vector<int> array_dims;
 extern map<string, int> func_usage_map;
-map<string, string> globaldecl;
+map<string, pair<string, int>> globaldecl;
 
 int blockCnt = 1;
 
@@ -194,6 +194,23 @@ void insertKeywords(){
 
 	type = {"char", "FILE*"};
 	insert_imp_func("fputc", type, "char");
+
+	// String Functions
+
+	type = {"char*"};
+	insert_imp_func("strlen", type, "int");
+
+	type = {"char*", "char*"};
+	insert_imp_func("strcmp", type, "int");
+
+	type = {"char*", "char*", "int"};
+	insert_imp_func("strncmp", type, "int");
+
+	type = {"char*", "char*"};
+	insert_imp_func("strcpy", type, "char*");
+
+	insert_imp_func("strcat", type, "char*");
+
 }
 
 void insert_imp_func(string func_name, vector<string> type, string ret_type){
@@ -489,7 +506,8 @@ void setGlobal(){
 	for(auto &it: gst){
 		if(it.second->type.substr(0,2) == "in" || it.second->type.substr(0,2)=="ch"){
 			it.second->is_global = 1;
-			globaldecl.insert(make_pair(it.first,"0"));
+			globaldecl.insert(make_pair(it.first,make_pair("0", 0)));
+			if(it.second->size > 4) globaldecl[it.first].second = it.second->size/4;
 		}
 	}
 }

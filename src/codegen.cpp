@@ -19,7 +19,9 @@ qid empty_var("", NULL);
 extern vector<quad> code;
 extern ofstream code_file;
 extern map<string, int> func_usage_map;
-extern map<string , string> globaldecl;
+extern map<string , pair<string, int>> globaldecl;
+extern map<string, vector<qid>> global_array_init_map;
+extern sym_table gst;
 
 string get_label(){
     return "L" +to_string(label_counter++);
@@ -410,8 +412,10 @@ string char_to_int(string sym){
 
 
 void assign_op(quad* instr){
-    if(instr->res.second->is_global && !in_func){
-        globaldecl[instr->res.first] = instr->arg1.first;
+    if(!in_func){
+        cout<<instr->res.first<<"\n";
+        if(instr->res.first == "array_init") return;
+        globaldecl[instr->res.first].first = instr->arg1.first;
         return;
     }
     instr->arg1.first = char_to_int(instr->arg1.first);
@@ -433,6 +437,10 @@ void assign_op(quad* instr){
     else if(is_integer(instr->arg1.first)){
         // string reg = getReg(instr->res, qid("", NULL), qid("", NULL), instr->idx);
         string mem = get_mem_location(&instr->res, &instr->arg1, instr->idx, 1);
+        if(reg_desc.find(mem) != reg_desc.end()){
+            free_reg(mem);
+            update_reg_desc(mem, &instr->res);
+        }
         code_file << "\tmov "<< mem << ", dword "<< instr->arg1.first <<endl;
         //nstr->res.second->addr_descriptor.stack = 0;
     }
@@ -960,7 +968,7 @@ void array_op(quad* instr){
         string reg = getReg(&instr->res, &empty_var, &instr->arg2, instr->idx);
         string mem, str;
         
-        if(instr->arg1.second->isArray) {    //First index
+        if(instr->arg1.second->isArray && !instr->arg1.second->is_global) {    //First index
             if(instr->arg1.second->addr_descriptor.reg != ""){
                 string temp_reg = instr->arg1.second->addr_descriptor.reg;
                 instr->arg1.second->addr_descriptor.reg = "";
@@ -1103,16 +1111,52 @@ void genCode(){
         }
         if(!ended) end_basic_block();
     }
+
+    print_global_data();
+    
+}
+
+void print_global_data(){
     if(!globaldecl.empty()){
         code_file<<"section .data\n";
         for(auto it:globaldecl){
-            code_file<<"\t"<<it.first<<" dd "<<it.second<<"\n";
+            if(it.second.second == 0) code_file<<"\t"<<it.first<<get_type_size(it.first)<<it.second.first<<"\n";
+            else{
+                if(global_array_init_map.find(it.first) == global_array_init_map.end()) code_file<<"\t"<<it.first<<" times "<<it.second.second <<get_type_size(it.first)<<it.second.first<<"\n";
+                else{
+                    code_file<<"\t"<<it.first<<get_type_size(it.first);
+                    vector<qid> temp = global_array_init_map[it.first];
+                    reverse(temp.begin(), temp.end());
+                    int i;
+                    for(i = 0; i<temp.size()-1; i++){
+                        temp[i].first = char_to_int(temp[i].first);
+                        if(is_integer(temp[i].first)) code_file<<temp[i].first<<", ";
+                        else code_file<<"0, ";
+                    }
+                    i = temp.size()-1;
+                    temp[i].first = char_to_int(temp[i].first);
+                    if(is_integer(temp[i].first)) code_file<<temp[i].first;
+                    else code_file<<"0";
+
+                    int extra_elements = it.second.second - temp.size();
+                    while(extra_elements > 0){
+                        extra_elements--;
+                        code_file<<", 0";
+                    }
+                    code_file<<"\n";
+                }
+            }
         }
     }
     for(auto it: stringlabels){
         it.second[0] = '\`', it.second[it.second.length()-1] = '\`';
         code_file<<"str"<<it.first<<": db "<<it.second<<", 0\n";
     }
+}
+
+string get_type_size(string sym){
+    if(gst[sym]->type.substr(0,2) == "ch") return " db ";
+    else return " dd "; 
 }
 
 void end_basic_block(){
@@ -1186,7 +1230,8 @@ void freeDeadTemp(int idx){
 // 2: specifically requres address to be passed on further to some other variable
 string get_mem_location(qid* sym, qid* sym2, int idx, int flag){
     if(sym->second->is_global){
-        return string('['+sym->first+']');
+        if(globaldecl[sym->first].second == 0) return string('['+sym->first+']');
+        else return sym->first;
     }
     if(is_integer(sym->first)){
         if(flag) return string("dword " + sym->first);
