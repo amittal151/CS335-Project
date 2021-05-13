@@ -670,7 +670,7 @@ unary_expression
 			qid q = newtemp("int");
 			$$->place = q;
 			$$->nextlist.clear();
-			cout<<$3->type<<" \n";
+		
 			qid arg1;
 			arg1.second = new sym_entry;
 			arg1.second->type = $3->type;
@@ -747,7 +747,6 @@ cast_expression
 			// qid q = newtemp($$->type);
 			$$->place = $4->place;
 			$$->place.second->type = $2->type;
-			cout<<$2->type<<" \n";
 			$4->nextlist.clear();
 		}
 		else{
@@ -1976,7 +1975,6 @@ init_declarator
 						temp.second = new sym_entry;
 						temp.second->offset = entry->offset+i;
 						temp.second->size = 4;
-						cout<<temp.second->offset<<"\n";
 						emit(qid("=", NULL), initializer_list_values[0], qid("", NULL), temp, -1);
 					}
 				}
@@ -3739,11 +3737,6 @@ int main(int argc, char* argv[]){
 		
 		yyrestart(yyin);
 		yyparse();
-		
-		// if(last[0] != ';' && last[0] != '}' ){
-		// 	print_error();
-		// 	cout<<" syntax error, expected ';' or '}' at end of file\n";  
-		// }
 		
 	}
 

@@ -470,7 +470,6 @@ void return_op(quad* instr){
                 }
             }
             else{
-                cout<<struct_size<<" "<<struct_offset<<" HERE\n";
                 for(int i = 0; i<struct_size; i+=4){
                     code_file<<"\tmov "<<reg2<<", [ ebp - "<<struct_offset + 4 + i<<" ]\n";
                     code_file<<"\tmov [ "<<reg1<<" + "<<struct_size - i - 4<<" ], "<<reg2<<"\n";
@@ -611,7 +610,6 @@ string char_to_int(string sym){
 void assign_op(quad* instr){
     // for global variables
     if(!in_func){
-        cout<<instr->res.first<<"\n";
         if(instr->res.first == "array_init") return;
         globaldecl[instr->res.first].first = instr->arg1.first;
         return;
@@ -860,7 +858,6 @@ void ptr_op(quad* instr){
         code_file<<"\tmov "<<str <<", "<< reg<<endl;
         code_file<<"\tmov "<<reg<<", [ "<<reg<<" ]\n";
     }
-    cout<<reg<<" "<<instr->arg2.second->offset<<"\n";
     code_file<<"\tadd "<<reg<<", "<<instr->arg2.second->offset<<"\n";
 
     if(!instr->arg2.second->isArray) instr->res.second->is_derefer = 1;
@@ -876,9 +873,6 @@ void member_access(quad* instr){
         }
         pointed_by[instr->res.second->offset] = 1;
         instr->res.second->isArray = instr->arg2.second->isArray;
-        for(int i: instr->res.second->array_dims) {
-            cout<<i<<"\n";
-        }
     }
     else{
         string reg = getReg(&instr->arg1, &instr->res, &instr->arg2, instr->idx);
@@ -950,9 +944,9 @@ void genCode(){
     findBasicBlocks();
     initializeRegs();
     nextUse();
-    vector<int> visited = findDeadCode();
     jumpOptimisation();
-
+    vector<int> visited = findDeadCode();
+    
     gen_data_section();
     starting_code();
 
@@ -1077,8 +1071,6 @@ void print_global_data(){
 
 string get_type_size(string sym){
     if(gst[sym]->type.substr(0,2) == "ch"){
-        // if(gst[sym]->type[gst[sym]->type.length()-1] != '*') return " db ";
-        // else return " dd ";
         return " db ";
     }
     else return " dd "; 
@@ -1092,7 +1084,6 @@ void end_basic_block(){
             sym->second->addr_descriptor.reg = "";
             qid tem = *sym;
             string str = get_mem_location(&tem, &empty_var, -1, -1); 
-            cout<<reg->first<<endl;
             code_file<<"\tmov " << str <<", "<<reg->first<<"\n";
         }
         reg->second.clear();
@@ -1384,7 +1375,6 @@ vector<int> findDeadCode(){
 
 //----------------------------------------------------- Jump to Jump optimization ----------------------------------------------------//
 int findDest(int j, int cnt){
-    cout<<"yup"<<endl;
     if(cnt>200) return j;
     if((code[j].op.first == "GOTO" && code[j].arg1.first != "IF") && !(j>0 && code[j-1].op.first == "GOTO" && code[j-1].arg1.first == "IF")){
         return (code[j].idx = findDest(code[j].idx, cnt+1));
