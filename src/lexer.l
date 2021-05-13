@@ -151,8 +151,8 @@ void count(int flag)
 	for (i = 0; yytext[i] != '\0'; i++) {
 		if (yytext[i] == '\n'){
 			column = 0;
-            line ++;
-        }
+			line ++;
+		}
 		else if (yytext[i] == '\t')
 			column += 4 - (column % 4);
 		else
