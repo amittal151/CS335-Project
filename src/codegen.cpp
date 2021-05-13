@@ -474,7 +474,12 @@ void assign_op(quad* instr){
             instr->res.second->addr_descriptor.reg = reg;
             cout<<"HERE !! "<<reg<<" "<<instr->res.first<<"\n";
         }
-        
+        if(instr->res.first=="array_init"){
+            string tem = get_mem_location(&instr->res,&empty_var,instr->idx,-1);
+            code_file << "\tmov " << tem << ", " << reg << "\n";
+            free_reg(reg);
+        }
+
         if(instr->res.second->type[instr->res.second->type.length()-1] == '*'){
             pointed_by[addr_pointed_to[instr->arg1]] = 1;
         }
@@ -1130,12 +1135,12 @@ void print_global_data(){
                     int i;
                     for(i = 0; i<temp.size()-1; i++){
                         temp[i].first = char_to_int(temp[i].first);
-                        if(is_integer(temp[i].first)) code_file<<temp[i].first<<", ";
+                        if(is_integer(temp[i].first)||temp[i].first[0]=='\"') code_file<<temp[i].first<<", ";
                         else code_file<<"0, ";
                     }
                     i = temp.size()-1;
                     temp[i].first = char_to_int(temp[i].first);
-                    if(is_integer(temp[i].first)) code_file<<temp[i].first;
+                    if(is_integer(temp[i].first)||temp[i].first[0]=='\"') code_file<<temp[i].first;
                     else code_file<<"0";
 
                     int extra_elements = it.second.second - temp.size();
