@@ -10,7 +10,7 @@ typedef struct{
 	int size;
 	string node_name;
 	string type;
-	int expType;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
+	int expType = 0;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
 	int isInit;
 	int intVal;
 	double realVal;

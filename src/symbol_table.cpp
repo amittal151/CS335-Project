@@ -24,6 +24,7 @@ int avl=0;
 extern int isArray;
 extern vector<int> array_dims;
 extern map<string, int> func_usage_map;
+map<string, string> globaldecl;
 
 int blockCnt = 1;
 
@@ -484,6 +485,14 @@ void printFuncArg(){
      fclose(file);
 }
 
+void setGlobal(){
+	for(auto &it: gst){
+		if(it.second->type.substr(0,2) == "in" || it.second->type.substr(0,2)=="ch"){
+			it.second->is_global = 1;
+			globaldecl.insert(make_pair(it.first,"0"));
+		}
+	}
+}
 
 void printSymbolTable(sym_table* table, string file_name){
 	FILE* file = fopen(file_name.c_str(), "w");

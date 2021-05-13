@@ -144,7 +144,9 @@ primary_expression
 
 		//--3AC
 		sym_entry* temp = new sym_entry;
-		$$->place = qid(to_string($1->intVal), temp);
+		//$$->place = qid(to_string($1->intVal), temp);
+		if($1->type != "char" )$$->place = qid(to_string($1->intVal), temp);
+		else $$->place = qid($1->str, temp);
 		$$->nextlist.clear();
 
 	}
@@ -826,41 +828,51 @@ multiplicative_expression
 			string temp = mulExp($1->type, $3->type, '*');
 
 			if(!temp.empty()){
-				if(temp == "int"){
-					$$->type = "int" ;
+				$$->type = temp;
 
-					//--3AC
-					qid q = newtemp("int");
-					$$->place = q;
-					$$->nextlist.clear();
-					emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
+
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
 				}
-				else if(temp == "float"){
-					$$->type = "float";
+				else{
+					if(temp == "int"){
+						$$->type = "int" ;
 
-					//--3AC
-
-					qid q = newtemp("float");
-					$$->place = q;
-					$$->nextlist.clear();
-
-					if(isInt($1->type)){
-						qid q1 = newtemp($$->type);
-						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
-
-						emit(qid("*real", lookup("*")), q1, $3->place, q, -1);
+						//--3AC
+						qid q = newtemp("int");
+						$$->place = q;
+						$$->nextlist.clear();
+						emit(qid("*int", lookup("*")), $1->place, $3->place, q, -1);
 					}
-					else if(isInt($3->type)){
-						qid q1 = newtemp($$->type);
-						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+					else if(temp == "float"){
+						$$->type = "float";
 
-						emit(qid("*real", lookup("*")), $1->place, q1, q, -1);
-					}
-					else{
-						emit(qid("*real", lookup("*")), $1->place, $3->place, q, -1);
-					}
+						//--3AC
 
+						qid q = newtemp("float");
+						$$->place = q;
+						$$->nextlist.clear();
+
+						if(isInt($1->type)){
+							qid q1 = newtemp($$->type);
+							emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
+
+							emit(qid("*real", lookup("*")), q1, $3->place, q, -1);
+						}
+						else if(isInt($3->type)){
+							qid q1 = newtemp($$->type);
+							emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+
+							emit(qid("*real", lookup("*")), $1->place, q1, q, -1);
+						}
+						else{
+							emit(qid("*real", lookup("*")), $1->place, $3->place, q, -1);
+						}
+
+					}
 				}
+				$$->nextlist.clear();
 
 			}
 			else{
@@ -887,40 +899,49 @@ multiplicative_expression
 			if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
 			string temp =mulExp($1->type,$3->type,'/');
 			if(!temp.empty()){
-				if(temp == "int"){
-					$$->type = "int" ;
+				$$->type = temp;
 
-					//--3AC
-					qid q = newtemp("int");
-					$$->place = q;
-					$$->nextlist.clear();
-					emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
 				}
-				else if(temp == "float"){
-					$$->type = "float";
+				else{
+					if(temp == "int"){
+						$$->type = "int" ;
 
-					//--3AC
-
-					qid q = newtemp("float");
-					$$->place = q;
-					$$->nextlist.clear();
-
-					if(isInt($1->type)){
-						qid q1 = newtemp($$->type);
-						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
-
-						emit(qid("/real", lookup("/")), q1, $3->place, q, -1);
+						//--3AC
+						qid q = newtemp("int");
+						$$->place = q;
+						$$->nextlist.clear();
+						emit(qid("/int", lookup("/")), $1->place, $3->place, q, -1);
 					}
-					else if(isInt($3->type)){
-						qid q1 = newtemp($$->type);
-						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+					else if(temp == "float"){
+						$$->type = "float";
 
-						emit(qid("/real", lookup("/")), $1->place, q1, q, -1);
-					}
-					else{
-						emit(qid("/real", lookup("/")), $1->place, $3->place, q, -1);
+						//--3AC
+
+						qid q = newtemp("float");
+						$$->place = q;
+						$$->nextlist.clear();
+
+						if(isInt($1->type)){
+							qid q1 = newtemp($$->type);
+							emit(qid("inttoreal", NULL), $1->place, qid("", NULL), q1, -1);
+
+							emit(qid("/real", lookup("/")), q1, $3->place, q, -1);
+						}
+						else if(isInt($3->type)){
+							qid q1 = newtemp($$->type);
+							emit(qid("inttoreal", NULL), $3->place, qid("", NULL), q1, -1);
+
+							emit(qid("/real", lookup("/")), $1->place, q1, q, -1);
+						}
+						else{
+							emit(qid("/real", lookup("/")), $1->place, $3->place, q, -1);
+						}
 					}
 				}
+				$$->nextlist.clear();
 
 			}
 			else{
@@ -947,10 +968,16 @@ multiplicative_expression
 				$$->type = "int" ;
 
 				//--3AC
-				qid q = newtemp("int");
-				$$->place = q;
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid q = newtemp("int");
+					$$->place = q;
+					emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
+				}
 				$$->nextlist.clear();
-				emit(qid("%", lookup("%")), $1->place, $3->place, q, -1);
 
 			}
 			else{
@@ -992,26 +1019,32 @@ additive_expression
 				$$->temp_name = $1->temp_name + " + " + $3->temp_name;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				int cond1 = (isInt($1->type) && isFloat($3->type));
-				int cond2 = (isInt($3->type) && isFloat($1->type));
 
-				if(cond1){
-					qid temp2 = newtemp($3->type);
-					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-					emit(qid("+"+temp, lookup("+")), temp2, $3->place, temp1, -1);
-				}
-				else if(cond2){
-					qid temp2 = newtemp($1->type);
-					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-					emit(qid("+"+temp, lookup("+")), $1->place, temp2, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
 				}
 				else{
-					emit(qid("+"+temp, lookup("+")), $1->place, $3->place, temp1, -1);
-				}
+					qid temp1 = newtemp($$->type);
+					int cond1 = (isInt($1->type) && isFloat($3->type));
+					int cond2 = (isInt($3->type) && isFloat($1->type));
 
+					if(cond1){
+						qid temp2 = newtemp($3->type);
+						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
+						emit(qid("+"+temp, lookup("+")), temp2, $3->place, temp1, -1);
+					}
+					else if(cond2){
+						qid temp2 = newtemp($1->type);
+						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
+						emit(qid("+"+temp, lookup("+")), $1->place, temp2, temp1, -1);
+					}
+					else{
+						emit(qid("+"+temp, lookup("+")), $1->place, $3->place, temp1, -1);
+					}
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1;
 			}
 			else{
 				//TODO
@@ -1044,29 +1077,35 @@ additive_expression
 				$$->temp_name = $1->temp_name + " - " + $3->temp_name;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				int cond1 = (isInt($1->type) && isFloat($3->type));
-				int cond2 = (isInt($3->type) && isFloat($1->type));
 
-				if(cond1){
-					qid temp2 = newtemp($3->type);
-					emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
-					emit(qid("-"+temp, lookup("-")), temp2, $3->place, temp1, -1);
-				}
-				else if(cond2){
-					qid temp2 = newtemp($1->type);
-					emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
-					emit(qid("-"+temp, lookup("-")), $1->place, temp2, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
 				}
 				else{
-					emit(qid("-"+temp, lookup("-")), $1->place, $3->place, temp1, -1);
+					qid temp1 = newtemp($$->type);
+					int cond1 = (isInt($1->type) && isFloat($3->type));
+					int cond2 = (isInt($3->type) && isFloat($1->type));
+
+					if(cond1){
+						qid temp2 = newtemp($3->type);
+						emit(qid("inttoreal", NULL), $1->place, qid("", NULL), temp2, -1);
+						emit(qid("-"+temp, lookup("-")), temp2, $3->place, temp1, -1);
+					}
+					else if(cond2){
+						qid temp2 = newtemp($1->type);
+						emit(qid("inttoreal", NULL), $3->place, qid("", NULL), temp2, -1);
+						emit(qid("-"+temp, lookup("-")), $1->place, temp2, temp1, -1);
+					}
+					else{
+						emit(qid("-"+temp, lookup("-")), $1->place, $3->place, temp1, -1);
+					}
+					$$->place = temp1;
 				}
-				
 				$$->nextlist.clear();
-				$$->place = temp1;
+				
 			}
 			else{
-				//TODO
 				yyerror(("Incompatible types \'" + $1->type + "\' and \'" + $3->type + "\' for - operator").c_str());
 				$$->is_error = 1;
 			}
@@ -1098,11 +1137,18 @@ shift_expression
 				$$->temp_name = $1->temp_name + " << " + $3->temp_name;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("<<", lookup("<<")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("<<", lookup("<<")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				
 				$$->nextlist.clear();
-				$$->place = temp1;
+
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <<").c_str());
@@ -1132,11 +1178,17 @@ shift_expression
 				$$->temp_name = $1->temp_name + " >> " + $3->temp_name;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid(">>", lookup(">>")), $1->place, $3->place, temp1, -1);
-				
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid(">>", lookup(">>")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1;
+				
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >>").c_str());
@@ -1178,10 +1230,17 @@ relational_expression
 
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("<", lookup("<")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("<", lookup("<")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1; 
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <").c_str());
@@ -1218,10 +1277,16 @@ relational_expression
 				else $$->intVal = 0;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid(">", lookup(">")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid(">", lookup(">")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1; 
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >").c_str());
@@ -1256,10 +1321,16 @@ relational_expression
 				else $$->intVal = 0;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("<=", lookup("<=")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("<=", lookup("<=")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1; 
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary <=").c_str());
@@ -1294,10 +1365,17 @@ relational_expression
 				else $$->intVal = 0;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid(">=", lookup(">=")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid(">=", lookup(">=")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				 
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary >=").c_str());
@@ -1335,10 +1413,17 @@ equality_expression
 				else $$->intVal = 0;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("==", lookup("==")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("==", lookup("==")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				 
 				
 			}
 			else{
@@ -1371,10 +1456,17 @@ equality_expression
 				else $$->intVal = 0;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("!=", lookup("!=")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("!=", lookup("!=")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1; 
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				
 				
 			}
 			else{
@@ -1410,10 +1502,17 @@ and_expression
 				$$->intVal = $1->intVal & $3->intVal;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("&", lookup("&")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("&", lookup("&")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				 
 			}
 			else{
 				yyerror(("Invalid operands of types \'" + $1->type + "\' and \'" + $3->type + "\' to binary &").c_str());
@@ -1448,10 +1547,17 @@ exclusive_or_expression
 				$$->intVal = $1->intVal ^ $3->intVal;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("^", lookup("^")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("^", lookup("^")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1; 
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				
 				
 			}
 			else{
@@ -1489,10 +1595,17 @@ inclusive_or_expression
 				$$->intVal = $1->intVal | $3->intVal;
 
 				// 3AC
-				qid temp1 = newtemp($$->type);
-				emit(qid("|", lookup("|")), $1->place, $3->place, temp1, -1);
+				if($1->expType == 4 && $3->expType == 4){
+					$$->place = qid(to_string($$->intVal), $1->place.second);
+					$$->expType = 4;
+				}
+				else{
+					qid temp1 = newtemp($$->type);
+					emit(qid("|", lookup("|")), $1->place, $3->place, temp1, -1);
+					$$->place = temp1;
+				}
 				$$->nextlist.clear();
-				$$->place = temp1; 
+				 
 
 			}
 			else{
@@ -1774,8 +1887,6 @@ assignment_operator
 	| OR_ASSIGN			{$$ = $1;}
 	;
 
-
-// Abhishek TODO
 
 expression
 	: assignment_expression				{ $$ = $1; }
@@ -3787,7 +3898,8 @@ int main(int argc, char* argv[]){
 	if(!stop_compiler){
 
 		code_file.open("gen_code.asm");
-
+		
+		setGlobal();
 		print3AC_code();
 		genCode();
 		endAST();

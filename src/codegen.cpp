@@ -10,6 +10,7 @@ map<qid, int> addr_pointed_to;
 int string_counter = 0; 
 int label_counter = 0;
 int arg_size = 0;
+int in_func = 0;
 
 set<string> exclude_this;
 
@@ -18,6 +19,7 @@ qid empty_var("", NULL);
 extern vector<quad> code;
 extern ofstream code_file;
 extern map<string, int> func_usage_map;
+extern map<string , string> globaldecl;
 
 string get_label(){
     return "L" +to_string(label_counter++);
@@ -408,7 +410,10 @@ string char_to_int(string sym){
 
 
 void assign_op(quad* instr){
-
+    if(instr->res.second->is_global && !in_func){
+        globaldecl[instr->res.first] = instr->arg1.first;
+        return;
+    }
     instr->arg1.first = char_to_int(instr->arg1.first);
     // x = 1
     if(instr->res.second->is_derefer){
@@ -1040,6 +1045,7 @@ void genCode(){
             
             code_file<<"\t;"<<instr.arg1.first<<" "<<instr.op.first<<" "<<instr.arg2.first<<" "<<instr.res.first<<"\n";
             if(instr.op.first.substr(0, 5) == "FUNC_" && instr.op.first[(instr.op.first.size() - 3)] == 't'){
+                in_func = 1;
                 gen_func_label(&instr);
             }
             else if(instr.op.first.substr(0,2) == "++"  
@@ -1058,6 +1064,7 @@ void genCode(){
                 code_file << "\tleave\n";
                 code_file << "\tret\n";
                 clear_regs();
+                in_func = 0;
                 
             }
             else if(instr.op.first[0] == '-') sub_op(&instr);
@@ -1095,6 +1102,12 @@ void genCode(){
             else if(instr.op.first == "SIZEOF") sizeof_op(&instr);
         }
         if(!ended) end_basic_block();
+    }
+    if(!globaldecl.empty()){
+        code_file<<"section .data\n";
+        for(auto it:globaldecl){
+            code_file<<"\t"<<it.first<<" dd "<<it.second<<"\n";
+        }
     }
     for(auto it: stringlabels){
         it.second[0] = '\`', it.second[it.second.length()-1] = '\`';
@@ -1172,6 +1185,9 @@ void freeDeadTemp(int idx){
 // 1: for instructions which require size
 // 2: specifically requres address to be passed on further to some other variable
 string get_mem_location(qid* sym, qid* sym2, int idx, int flag){
+    if(sym->second->is_global){
+        return string('['+sym->first+']');
+    }
     if(is_integer(sym->first)){
         if(flag) return string("dword " + sym->first);
         else return sym->first;

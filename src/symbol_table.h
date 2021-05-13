@@ -24,6 +24,7 @@ typedef struct sym_entry{
 	int is_derefer = 0;
 	int isArray = 0;
 	int size_of_pointed = 0;
+	int is_global = 0;
 
 	vector<int> array_dims;
 	string storage_class;
@@ -91,3 +92,4 @@ int func_local_size(string name); // returns bytes required for local variables 
 sym_entry* retTypeAttrEntry(string struct_name, string id, string struct_var);
 int getStructsize(string struct_name);
 void insert_imp_func(string func_name, vector<string> type, string ret_type);
+void setGlobal();
