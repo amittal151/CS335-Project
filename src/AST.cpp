@@ -11,10 +11,6 @@ void endAST(){
 	fprintf(dotfile, "}\n");
 }
 
-vector<data> createVector(){
-	vector<data> attr;
-	return attr;
-}
 
 void insertAttr(vector<data> &v, treeNode* nod, string s, int flag){
 	data d;
@@ -25,13 +21,14 @@ void insertAttr(vector<data> &v, treeNode* nod, string s, int flag){
 }
 
 treeNode *makeleaf(string str){
+	//making leaf node and printing it in dot file
 	treeNode *node = new treeNode;
 	node->node_id = ++NodeCounter;
 	
 	string tmp = "";
 	for(int i=0; i<str.length(); ++i){
 		tmp+=str[i];
-		if(str[i]=='\\') tmp+=str[i];
+		if(str[i]=='\\') tmp+=str[i];	
 	}
 	node->node_name = tmp;
 
@@ -47,6 +44,7 @@ treeNode *makeleaf(string str){
 }
 
 treeNode *makenode(string s, vector<data> &v){
+	//making node and printing it in dot file
 	treeNode *node = new treeNode;
 	node->node_name = s;
 	node->node_id = ++NodeCounter;

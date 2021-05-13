@@ -50,7 +50,6 @@ typedef struct{
 void beginAST();
 void endAST();
 
-vector<data> createVector();
 void insertAttr(vector<data>&, treeNode* , string , int );
 treeNode *makeleaf(string);
 treeNode *makenode(string , vector<data>&);

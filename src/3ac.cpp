@@ -3,7 +3,8 @@
 
 using namespace std;
 
-vector<quad> code;
+vector<quad> code; 
+
 long long counter = 0;
 
 void emit(qid op, qid arg1, qid arg2, qid res, int idx){
@@ -25,12 +26,15 @@ void backpatch(vector<int>& bplist, int target){
 
 
 void casepatch(vector<int>& bplist, qid target){
+    //backpatch for case statement
+
     for(int i=0;i<bplist.size(); i++){
         code[bplist[i]].arg1 = target;
     }
 }
 
 qid newtemp(string type){
+    // creating temp variables
     string temp_var = "#V"+to_string(counter);
     counter++;
     insertSymbol(*curr_table, temp_var, type, getSize(type), 0, NULL);
@@ -38,6 +42,7 @@ qid newtemp(string type){
 }
 
 int assign_exp(string op, string type, string type1,string type2, qid arg1, qid arg2){
+    // emitting code for all type of assignment expressions
     string temp_op = "";
     qid sym_typ ;  
     qid sym_typ1;
@@ -88,6 +93,7 @@ int assign_exp(string op, string type, string type1,string type2, qid arg1, qid 
 }
 
 void backpatch_rem(){
+    // backpatching all the remaining goto to Function end
     int i,j;
     i = j = code.size()-1;
     i--;
