@@ -42,11 +42,11 @@ string postfixExpression(string type_name, int rule_num) {
             return "";
         }
         case 6:{
-            if(isInt(type_name))return type_name;
+            if(isInt(type_name) || type_name == "char")return type_name;
             return "";
         }
         case 7:{
-            if(isInt(type_name))return type_name;
+            if(isInt(type_name) || type_name == "char")return type_name;
             return "";
         }
         default : return "";
