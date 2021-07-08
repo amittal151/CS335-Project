@@ -3,7 +3,12 @@
 
 ## Description :
 C compiler project prepared as a project in CS335A Course at IITK under supervision of Prof. Amey Karkare, Dept. of Computer Science and Engineering. 
-As of now, Parser is implemented. 
+### Team Members
+    1. Abhinav Sharma
+    2. Abhishek Mittal
+    3. Bhuvnesh Bamoriya
+    4. K. Krishna Dhakshin
+    5. Mohit Mohan
 
 ## Milestone 1 : Scanner
 
